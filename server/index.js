@@ -1,11 +1,17 @@
-const Connection = require("tedious").Connection;
 const sql = require("mssql");
+const express = require("express");
+
+const app = express();
 
 const config = {
+    user: "adibk",
+    password: "test",
     server: "DESKTOP-4RJ0SV4\\SQLEXPRESS",
     options: {
         encrypt: true,
         database: "StartggDB",
+        trustServerCertificate: true,
+        trustedConnection: true,
     },
 };
 
@@ -17,17 +23,17 @@ sql.connect(config, (err) => {
     }
 });
 
-const connectionString =
-    "Server=localhost\\SQLEXPRESS01;Database=master;Trusted_Connection=True;";
-
-const connection = new Connection(config);
-
-connection.on("connect", function (err) {
-    if (err) {
-        console.error(err);
-    } else {
-        console.log("Connected to SQL Server");
-    }
+app.get("/", async (request, response) => {
+    new sql.Request().query("SELECT * FROM Players", (err, result) => {
+        if (err) {
+            console.error(err);
+        } else {
+            response.send(result.recordset);
+            console.log(result.recordset);
+        }
+    });
 });
 
-connection.connect();
+app.listen(3000, () => {
+    console.log("Listening...");
+});
