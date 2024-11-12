@@ -23,16 +23,18 @@ sql.connect(config, (err) => {
     }
 });
 
-app.get("/", async (request, response) => {
+app.get("/", async (req, res) => {
     new sql.Request().query("SELECT * FROM Players", (err, result) => {
         if (err) {
-            console.error(err);
+            console.error(ermr);
         } else {
-            response.send(result.recordset);
+            res.send(result.recordset);
             console.log(result.recordset);
         }
     });
 });
+
+app.post("/addUser", (req, res) => {});
 
 app.listen(3000, () => {
     console.log("Listening...");
