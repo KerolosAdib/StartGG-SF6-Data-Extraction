@@ -1,19 +1,17 @@
-import React from "react";
-import { useQuery, gql } from "@apollo/client";
+import { useEffect } from "react";
 
-const GET_USERS = gql`
-    query ($page: Int!) {
+const GET_USERS = `
+    query ($page: Int!, $perPage: Int!) {
         tournaments(
             query: {
                 filter: { videogameIds: [43868], past: true }
-                perPage: 10
                 page: $page
+                perPage: $perPage
             }
         ) {
             nodes {
                 id
-                slug
-                events(filter: { videogameId: 43868 }) {
+                events(filter: { videogameId: 43868, published: true }) {
                     entrants {
                         nodes {
                             name
@@ -22,6 +20,7 @@ const GET_USERS = gql`
                                     discriminator
                                 }
                                 player {
+                                    id
                                     gamerTag
                                 }
                             }
@@ -33,27 +32,44 @@ const GET_USERS = gql`
     }
 `;
 
+async function FetchTournaments() {
+    var res = await fetch("http://localhost:3001/GetInfo", {
+        method: "GET",
+
+        headers: {
+            "Content-Type": "application/json",
+        },
+    });
+    console.log(res);
+    console.log(res.json());
+}
+
 export default function UserList() {
-    const { error, data, loading } = useQuery(GET_USERS, {
-        variables: { page: 1 },
+    useEffect(() => {
+        FetchTournaments();
     });
+    // const { error, data, loading } = useQuery(GET_USERS, {
+    //     variables: { page: 1, perPage: 5 },
+    // });
 
-    console.log({ error, loading, data });
-    if (loading) return <div>loading...</div>;
-    if (error) return <div>error</div>;
+    // console.log({ error, loading, data });
+    // if (loading) return <div>loading...</div>;
+    // if (error) return <div>error</div>;
 
-    console.log("Hello");
-    return data.tournaments.nodes[0].events[0].entrants.nodes.map((entrant) => {
-        const list = [];
-        entrant.participants.forEach((participant) => {
-            list.push(
-                <div key={participant.player.id}>
-                    {participant.player.gamerTag +
-                        ": " +
-                        participant.user.discriminator}
-                </div>
-            );
-        });
-        return <div>{list}</div>;
-    });
+    // const list = [];
+    // data.tournaments.nodes.forEach((tournament) => {
+    //     if (tournament.events.length > 0) {
+    //         tournament.events[0].entrants.nodes.forEach((entrant) => {
+    //             entrant.participants.forEach((participant) => {
+    //                 const tag = participant.player.gamerTag;
+    //                 list.push(
+    //                     <div key={tournament.id + participant.player.id}>
+    //                         {tag + ": " + participant.player.id}
+    //                     </div>
+    //                 );
+    //             });
+    //         });
+    //     }
+    // });
+    // return <div>{list}</div>;
 }
