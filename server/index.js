@@ -38,6 +38,34 @@ const GET_USERS = `
     }
 `;
 
+const GET_SETS_FOR_ENTRANT = `
+    query($EntrantID: ID!) {
+        entrant(id: $EntrantID) {
+            name
+            paginatedSets {
+                nodes {
+                    displayScore(mainEntrantId: $EntrantID)
+                    winnerId
+                    totalGames
+                }
+            }
+            participants {
+                id
+                gamerTag
+                player {
+                    id
+                    gamerTag
+                }
+                user {
+                    id
+                    discriminator
+                    slug
+                }
+            }
+        }
+    }
+`;
+
 const pg = new PG.Pool({
     user: process.env.PGUSER,
     password: process.env.PGPASSWORD,
@@ -57,6 +85,8 @@ const config = {
         trustedConnection: true,
     },
 };
+
+const delay = (time) => new Promise((resolve) => setTimeout(resolve, time));
 
 async function checkConnection() {
     try {
@@ -148,6 +178,32 @@ async function FetchTournaments() {
             });
         }
         page++;
+    }
+
+    var i = 0;
+    while (i < data.length) {
+        var results = await fetch("https://api.start.gg/gql/alpha", {
+            method: "POST",
+
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: "Bearer " + process.env.AUTH_TOKEN,
+            },
+
+            body: JSON.stringify({
+                query: GET_SETS_FOR_ENTRANT,
+                variables: {
+                    EntrantID: data[i],
+                },
+            }),
+        });
+
+        results = await results.json();
+        console.log(i);
+        console.log(data.length);
+        console.log(results.data.entrant.paginatedSets);
+        await delay(750);
+        i++;
     }
     return data;
 }
