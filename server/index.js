@@ -24,7 +24,7 @@ const GET_USERS = `
         ) {
             nodes {
                 id
-                events(filter: { videogameId: [$SF6], published: true }) {
+                events(filter: { videogameId: [$SF6] published: true type: 1 }) {
                     id
                     entrants {
                         nodes {
@@ -41,25 +41,31 @@ const GET_USERS = `
 const GET_SETS_FOR_ENTRANT = `
     query($EntrantID: ID!) {
         entrant(id: $EntrantID) {
+            id
             name
             paginatedSets {
                 nodes {
                     displayScore(mainEntrantId: $EntrantID)
                     winnerId
-                    totalGames
-                }
-            }
-            participants {
-                id
-                gamerTag
-                player {
-                    id
-                    gamerTag
-                }
-                user {
-                    id
-                    discriminator
-                    slug
+                    slots {
+                        entrant {
+                            id
+                            name
+                            participants {
+                                id
+                                gamerTag
+                                player {
+                                    id
+                                    gamerTag
+                                }
+                                user {
+                                    id
+                                    discriminator
+                                    slug
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -201,7 +207,13 @@ async function FetchTournaments() {
         results = await results.json();
         console.log(i);
         console.log(data.length);
-        console.log(results.data.entrant.paginatedSets);
+        console.log(results.data.entrant.id);
+        console.log(results.data.entrant.name);
+        results.data.entrant.paginatedSets.nodes.forEach((set) => {
+            console.log(set);
+            console.log(set.slots[0].entrant.participants);
+            console.log(set.slots[1].entrant.participants);
+        });
         await delay(750);
         i++;
     }

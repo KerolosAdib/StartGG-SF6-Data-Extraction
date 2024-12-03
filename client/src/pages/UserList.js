@@ -1,37 +1,5 @@
 import { useEffect } from "react";
 
-const GET_USERS = `
-    query ($page: Int!, $perPage: Int!) {
-        tournaments(
-            query: {
-                filter: { videogameIds: [43868], past: true }
-                page: $page
-                perPage: $perPage
-            }
-        ) {
-            nodes {
-                id
-                events(filter: { videogameId: 43868, published: true }) {
-                    entrants {
-                        nodes {
-                            name
-                            participants {
-                                user {
-                                    discriminator
-                                }
-                                player {
-                                    id
-                                    gamerTag
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-`;
-
 async function FetchTournaments() {
     var res = await fetch("http://localhost:3001/GetInfo", {
         method: "GET",
