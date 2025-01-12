@@ -91,25 +91,26 @@ const GET_PLAYERS_WITHIN_EVENT = `
 `;
 
 const GET_PLAYERS_WITHIN_EVENT_TEST = `
-    query ($tournamentIDs: [ID]! $eventIDs: [ID]! $eventsPerPage: Int! $eventsPage: Int! $entrantsPerPage: Int! $entrantsPage: Int!) {
+    query ($tournamentIDs: [ID]! $eventIDs: [ID]! $perPage: Int! $page: Int!) {
         tournaments(query: {
             filter: {
                 ids: $tournamentIDs
             }
         }) {
-            nodes: {
+            nodes {
+                id
                 events(filter: {
                     ids: $eventIDs
-                    perPage: $eventsPerPage
-                    page: $eventsPage
                 }) {
+                    id
                     entrants(query: {
-                        perPage: $entrantsPerPage
-                        page: $entrantsPage
+                        perPage: $perPage
+                        page: $page
                     }) {
-                        nodes: {
-                            participants: {
-                                player: {
+                        nodes {
+                            id
+                            participants {
+                                player {
                                     id
                                     gamerTag
                                     user {
@@ -276,7 +277,8 @@ app.get("/", async (req, res) => {
 app.get("/GetInfo", async (req, res) => {
     var tournamentIds = await FetchTournaments();
     var events = await RetrieveEventsBasedOnTournaments(tournamentIds);
-    var playerMap = await RetrievePlayersFromEvents(events, tournamentIds);
+    //var playerMap = await RetrievePlayersFromEvents(events, tournamentIds);
+    await RetrievePlayersFromEvents2(events);
     res.writeHead(200, { "Content-Type": "application/json" });
     res.end(JSON.stringify(tournamentIds));
 });
@@ -456,12 +458,16 @@ async function RetrieveEventsBasedOnTournaments(tournamentIds) {
                         event.name,
                         event.slug,
                     ]);
-                    outdatedEvents.push(event.id);
+                    //tournamentIds.get(id).set(event.id, new Map());
+                    outdatedEvents.push({
+                        EventID: event.id,
+                        TournamentID: id,
+                    });
                 }
             });
         });
         i++;
-        await delay(1000);
+        await delay(750);
     }
     return outdatedEvents;
 }
@@ -527,11 +533,10 @@ async function RetrievePlayersFromEvents(eventIds) {
                     console.log(
                         `${playerId}: ${entrant.participants[0].player.gamerTag}`
                     );
-                    if (players.get(eventIds[i])) {
-                        players.get(eventIds[i]).push(playerId);
-                    } else {
-                        players.set(eventIds[i], [playerId]);
-                    }
+                    if (!players.get(eventIds[i]))
+                        players.set(eventIds[i], new Map());
+
+                    players.get(eventIds[i]).set(playerId, entrant.id);
                 }
             });
             j++;
@@ -541,6 +546,213 @@ async function RetrievePlayersFromEvents(eventIds) {
         i++;
     }
     return players;
+}
+
+async function RetrievePlayersFromEvents2(events) {
+    const players = new Map();
+
+    var i = 0;
+    while (i < events.length) {
+        const tournamentIDs = [];
+        const eventIDs = [];
+        var start = i;
+        for (; i < events.length && i < start + 20; i++) {
+            if (!tournamentIDs[events[i].TournamentID])
+                tournamentIDs.push(events[i].TournamentID);
+            eventIDs.push(events[i].EventID);
+        }
+
+        var hasMore = true;
+        var page = 1;
+        while (hasMore) {
+            hasMore = false;
+            var results = await fetch("https://api.start.gg/gql/alpha", {
+                method: "POST",
+
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: "Bearer " + process.env.AUTH_TOKEN,
+                },
+
+                body: JSON.stringify({
+                    query: GET_PLAYERS_WITHIN_EVENT_TEST,
+                    variables: {
+                        tournamentIDs: tournamentIDs,
+                        eventIDs: eventIDs,
+                        perPage: 15,
+                        page: page,
+                    },
+                }),
+            });
+
+            try {
+                results = await results.json();
+
+                console.log(results);
+                results.data.tournaments.nodes.forEach((tournament) => {
+                    var tournamentID = tournament.id;
+                    tournament.events.forEach((event) => {
+                        var eventID = event.id;
+                        if (event.entrants.nodes.length == 15) hasMore = true;
+                        event.entrants.nodes.forEach((entrant) => {
+                            if (
+                                entrant.participants[0] &&
+                                entrant.participants[0].player
+                            ) {
+                                var playerID =
+                                    entrant.participants[0].player.id;
+                                var playerGamerTag =
+                                    entrant.participants[0].player.gamerTag;
+                                var playerSlug = "";
+                                if (entrant.participants[0].player.user) {
+                                    playerSlug =
+                                        entrant.participants[0].player.user
+                                            .slug;
+                                }
+
+                                const insertOrUpdatePlayer = `
+                                    INSERT INTO Players(PlayerID, GamerTag, TotalWins, TotalLosses, Slug)
+                                    VALUES($1, $2, $3, $4, $5)
+                                    ON CONFLICT(PlayerID)
+                                    DO UPDATE
+                                    SET GamerTag = EXCLUDED.GamerTag,
+                                        Slug = EXCLUDED.Slug
+                                `;
+
+                                pg.query(insertOrUpdatePlayer, [
+                                    playerID,
+                                    playerGamerTag,
+                                    0,
+                                    0,
+                                    playerSlug,
+                                ]);
+
+                                console.log(
+                                    `${playerID}: ${entrant.participants[0].player.gamerTag}`
+                                );
+                            }
+                        });
+                    });
+                });
+                page++;
+                console.log(i + "/" + events.length);
+            } catch (err) {
+                console.log(err);
+                hasMore = true;
+            }
+            await delay(750);
+        }
+    }
+
+    // for (var i = 0; i < tournamentIDArray.length; i += 15) {
+    //     var currentTournaments = [];
+    //     var currentEvents = [];
+    //     currentTournaments.push(...tournamentIDArray.slice(i, i + 15));
+    //     for (const key of currentTournaments) {
+    //         const eventIDArray = Array.from(tournamentIDs.get(key).keys());
+    //         //currentEvents.push(...eventIDArray);
+    //         for (const event of eventIDArray) {
+    //             currentEvents.push(event);
+    //             totalEvents++;
+    //         }
+    //     }
+    //     var hasMore = true;
+    //     var j = 1;
+    //     while (hasMore) {
+    //         hasMore = false;
+    //         var results = await fetch("https://api.start.gg/gql/alpha", {
+    //             method: "POST",
+
+    //             headers: {
+    //                 "Content-Type": "application/json",
+    //                 Authorization: "Bearer " + process.env.AUTH_TOKEN,
+    //             },
+
+    //             body: JSON.stringify({
+    //                 query: GET_PLAYERS_WITHIN_EVENT_TEST,
+    //                 variables: {
+    //                     tournamentIDs: currentTournaments,
+    //                     eventIDs: currentEvents,
+    //                     perPage: 10,
+    //                     page: j,
+    //                 },
+    //             }),
+    //         });
+
+    //         results = await results.json();
+
+    //         console.log(results);
+    //         results.data.tournaments.nodes.forEach((tournament) => {
+    //             var tournamentID = tournament.id;
+    //             tournament.events.forEach((event) => {
+    //                 var eventID = event.id;
+    //                 if (event.entrants.nodes.length == 10) hasMore = true;
+    //                 event.entrants.nodes.forEach((entrant) => {
+    //                     if (
+    //                         entrant.participants[0] &&
+    //                         entrant.participants[0].player
+    //                     ) {
+    //                         var playerID = entrant.participants[0].player.id;
+    //                         var playerGamerTag =
+    //                             entrant.participants[0].player.gamerTag;
+    //                         var playerSlug = "";
+    //                         if (entrant.participants[0].player.user) {
+    //                             playerSlug =
+    //                                 entrant.participants[0].player.user.slug;
+    //                         }
+
+    //                         const insertOrUpdatePlayer = `
+    //                             INSERT INTO Players(PlayerID, GamerTag, TotalWins, TotalLosses, Slug)
+    //                             VALUES($1, $2, $3, $4, $5)
+    //                             ON CONFLICT(PlayerID)
+    //                             DO UPDATE
+    //                             SET GamerTag = EXCLUDED.GamerTag,
+    //                                 Slug = EXCLUDED.Slug
+    //                         `;
+
+    //                         pg.query(insertOrUpdatePlayer, [
+    //                             playerID,
+    //                             playerGamerTag,
+    //                             0,
+    //                             0,
+    //                             playerSlug,
+    //                         ]);
+
+    //                         console.log(
+    //                             `${playerID}: ${entrant.participants[0].player.gamerTag}`
+    //                         );
+    //                         if (
+    //                             !tournamentIDs
+    //                                 .get(tournamentID)
+    //                                 .get(eventID)
+    //                                 .has(playerID)
+    //                         )
+    //                             tournamentIDs
+    //                                 .get(tournamentID)
+    //                                 .get(eventID)
+    //                                 .set(playerID, []);
+    //                         tournamentIDs
+    //                             .get(tournamentID)
+    //                             .get(eventID)
+    //                             .get(playerID)
+    //                             .push(entrant.id);
+    //                     }
+    //                 });
+    //             });
+    //         });
+    //         j++;
+    //         await delay(750);
+    //     }
+    //     console.log(`${i}/${tournamentIDArray.length}`);
+    // }
+
+    return players;
+}
+
+async function SetRetrieval(playerMap) {
+    const getTournamentIDsFromDB = "SELECT TournamentID FROM Tournaments";
+    const res = await pg.query(getTournamentIDsFromDB);
+    const tournamentIDs = res.rows;
 }
 
 async function test() {
