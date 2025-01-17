@@ -126,6 +126,438 @@ const GET_PLAYERS_WITHIN_EVENT_TEST = `
     }
 `;
 
+const GET_PLAYERS_WITHIN_EVENT_TAKE_2 = `
+    query ($E1: ID! $E2: ID! $E3: ID! $E4: ID! $E5: ID!
+        $E6: ID! $E7: ID! $E8: ID! $E9: ID! $E10: ID!
+        $E11: ID! $E12: ID! $E13: ID! $E14: ID! $E15: ID!
+        $E16: ID! $E17: ID! $E18: ID! $E19: ID! $E20: ID!
+        $P1: Int! $P2: Int! $P3: Int! $P4: Int! $P5: Int!
+        $P6: Int! $P7: Int! $P8: Int! $P9: Int! $P10: Int!
+        $P11: Int! $P12: Int! $P13: Int! $P14: Int! $P15: Int!
+        $P16: Int! $P17: Int! $P18: Int! $P19: Int! $P20: Int!
+        $perPage: Int!) {
+        E1: event(id: $E1) {
+            id
+            entrants(query: {
+                perPage: $perPage
+                page: $P1
+            }) {
+                nodes {
+                    id
+                    participants {
+                        player {
+                            id
+                            gamerTag
+                            user {
+                                slug
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        E2: event(id: $E2) {
+            id
+            entrants(query: {
+                perPage: $perPage
+                page: $P2
+            }) {
+                nodes {
+                    id
+                    participants {
+                        player {
+                            id
+                            gamerTag
+                            user {
+                                slug
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        E3: event(id: $E3) {
+            id
+            entrants(query: {
+                perPage: $perPage
+                page: $P3
+            }) {
+                nodes {
+                    id
+                    participants {
+                        player {
+                            id
+                            gamerTag
+                            user {
+                                slug
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        E4: event(id: $E4) {
+            id
+            entrants(query: {
+                perPage: $perPage
+                page: $P4
+            }) {
+                nodes {
+                    id
+                    participants {
+                        player {
+                            id
+                            gamerTag
+                            user {
+                                slug
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        E5: event(id: $E5) {
+            id
+            entrants(query: {
+                perPage: $perPage
+                page: $P5
+            }) {
+                nodes {
+                    id
+                    participants {
+                        player {
+                            id
+                            gamerTag
+                            user {
+                                slug
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        E6: event(id: $E6) {
+            id
+            entrants(query: {
+                perPage: $perPage
+                page: $P6
+            }) {
+                nodes {
+                    id
+                    participants {
+                        player {
+                            id
+                            gamerTag
+                            user {
+                                slug
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        E7: event(id: $E7) {
+            id
+            entrants(query: {
+                perPage: $perPage
+                page: $P7
+            }) {
+                nodes {
+                    id
+                    participants {
+                        player {
+                            id
+                            gamerTag
+                            user {
+                                slug
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        E8: event(id: $E8) {
+            id
+            entrants(query: {
+                perPage: $perPage
+                page: $P8
+            }) {
+                nodes {
+                    id
+                    participants {
+                        player {
+                            id
+                            gamerTag
+                            user {
+                                slug
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        E9: event(id: $E9) {
+            id
+            entrants(query: {
+                perPage: $perPage
+                page: $P9
+            }) {
+                nodes {
+                    id
+                    participants {
+                        player {
+                            id
+                            gamerTag
+                            user {
+                                slug
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        E10: event(id: $E10) {
+            id
+            entrants(query: {
+                perPage: $perPage
+                page: $P10
+            }) {
+                nodes {
+                    id
+                    participants {
+                        player {
+                            id
+                            gamerTag
+                            user {
+                                slug
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        E11: event(id: $E11) {
+            id
+            entrants(query: {
+                perPage: $perPage
+                page: $P11
+            }) {
+                nodes {
+                    id
+                    participants {
+                        player {
+                            id
+                            gamerTag
+                            user {
+                                slug
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        E12: event(id: $E12) {
+            id
+            entrants(query: {
+                perPage: $perPage
+                page: $P12
+            }) {
+                nodes {
+                    id
+                    participants {
+                        player {
+                            id
+                            gamerTag
+                            user {
+                                slug
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        E13: event(id: $E13) {
+            id
+            entrants(query: {
+                perPage: $perPage
+                page: $P13
+            }) {
+                nodes {
+                    id
+                    participants {
+                        player {
+                            id
+                            gamerTag
+                            user {
+                                slug
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        E14: event(id: $E14) {
+            id
+            entrants(query: {
+                perPage: $perPage
+                page: $P14
+            }) {
+                nodes {
+                    id
+                    participants {
+                        player {
+                            id
+                            gamerTag
+                            user {
+                                slug
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        E15: event(id: $E15) {
+            id
+            entrants(query: {
+                perPage: $perPage
+                page: $P15
+            }) {
+                nodes {
+                    id
+                    participants {
+                        player {
+                            id
+                            gamerTag
+                            user {
+                                slug
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        E16: event(id: $E16) {
+            id
+            entrants(query: {
+                perPage: $perPage
+                page: $P16
+            }) {
+                nodes {
+                    id
+                    participants {
+                        player {
+                            id
+                            gamerTag
+                            user {
+                                slug
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        E17: event(id: $E17) {
+            id
+            entrants(query: {
+                perPage: $perPage
+                page: $P17
+            }) {
+                nodes {
+                    id
+                    participants {
+                        player {
+                            id
+                            gamerTag
+                            user {
+                                slug
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        E18: event(id: $E18) {
+            id
+            entrants(query: {
+                perPage: $perPage
+                page: $P18
+            }) {
+                nodes {
+                    id
+                    participants {
+                        player {
+                            id
+                            gamerTag
+                            user {
+                                slug
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        E19: event(id: $E19) {
+            id
+            entrants(query: {
+                perPage: $perPage
+                page: $P19
+            }) {
+                nodes {
+                    id
+                    participants {
+                        player {
+                            id
+                            gamerTag
+                            user {
+                                slug
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        E20: event(id: $E20) {
+            id
+            entrants(query: {
+                perPage: $perPage
+                page: $P20
+            }) {
+                nodes {
+                    id
+                    participants {
+                        player {
+                            id
+                            gamerTag
+                            user {
+                                slug
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+`;
+
 const GET_SETS = `
     query ($EventID: ID!) {
         event(id: $EventID) {
@@ -278,7 +710,7 @@ app.get("/GetInfo", async (req, res) => {
     var tournamentIds = await FetchTournaments();
     var events = await RetrieveEventsBasedOnTournaments(tournamentIds);
     //var playerMap = await RetrievePlayersFromEvents(events, tournamentIds);
-    await RetrievePlayersFromEvents2(events);
+    var players = await RetrievePlayersFromEvents3(events);
     res.writeHead(200, { "Content-Type": "application/json" });
     res.end(JSON.stringify(tournamentIds));
 });
@@ -627,6 +1059,8 @@ async function RetrievePlayersFromEvents2(events) {
                                     playerSlug,
                                 ]);
 
+                                players.set(entrant.id, playerID);
+
                                 console.log(
                                     `${playerID}: ${entrant.participants[0].player.gamerTag}`
                                 );
@@ -644,108 +1078,323 @@ async function RetrievePlayersFromEvents2(events) {
         }
     }
 
-    // for (var i = 0; i < tournamentIDArray.length; i += 15) {
-    //     var currentTournaments = [];
-    //     var currentEvents = [];
-    //     currentTournaments.push(...tournamentIDArray.slice(i, i + 15));
-    //     for (const key of currentTournaments) {
-    //         const eventIDArray = Array.from(tournamentIDs.get(key).keys());
-    //         //currentEvents.push(...eventIDArray);
-    //         for (const event of eventIDArray) {
-    //             currentEvents.push(event);
-    //             totalEvents++;
-    //         }
-    //     }
-    //     var hasMore = true;
-    //     var j = 1;
-    //     while (hasMore) {
-    //         hasMore = false;
-    //         var results = await fetch("https://api.start.gg/gql/alpha", {
-    //             method: "POST",
+    async function RetrievePlayersFromEvents2(events) {
+        const players = new Map();
 
-    //             headers: {
-    //                 "Content-Type": "application/json",
-    //                 Authorization: "Bearer " + process.env.AUTH_TOKEN,
-    //             },
+        var i = 0;
+        while (i < events.length) {
+            const tournamentIDs = [];
+            const eventIDs = [];
+            var start = i;
+            for (; i < events.length && i < start + 20; i++) {
+                if (!tournamentIDs[events[i].TournamentID])
+                    tournamentIDs.push(events[i].TournamentID);
+                eventIDs.push(events[i].EventID);
+            }
 
-    //             body: JSON.stringify({
-    //                 query: GET_PLAYERS_WITHIN_EVENT_TEST,
-    //                 variables: {
-    //                     tournamentIDs: currentTournaments,
-    //                     eventIDs: currentEvents,
-    //                     perPage: 10,
-    //                     page: j,
-    //                 },
-    //             }),
-    //         });
+            var hasMore = true;
+            var page = 1;
+            while (hasMore) {
+                hasMore = false;
+                var results = await fetch("https://api.start.gg/gql/alpha", {
+                    method: "POST",
 
-    //         results = await results.json();
+                    headers: {
+                        "Content-Type": "application/json",
+                        Authorization: "Bearer " + process.env.AUTH_TOKEN,
+                    },
 
-    //         console.log(results);
-    //         results.data.tournaments.nodes.forEach((tournament) => {
-    //             var tournamentID = tournament.id;
-    //             tournament.events.forEach((event) => {
-    //                 var eventID = event.id;
-    //                 if (event.entrants.nodes.length == 10) hasMore = true;
-    //                 event.entrants.nodes.forEach((entrant) => {
-    //                     if (
-    //                         entrant.participants[0] &&
-    //                         entrant.participants[0].player
-    //                     ) {
-    //                         var playerID = entrant.participants[0].player.id;
-    //                         var playerGamerTag =
-    //                             entrant.participants[0].player.gamerTag;
-    //                         var playerSlug = "";
-    //                         if (entrant.participants[0].player.user) {
-    //                             playerSlug =
-    //                                 entrant.participants[0].player.user.slug;
-    //                         }
+                    body: JSON.stringify({
+                        query: GET_PLAYERS_WITHIN_EVENT_TEST,
+                        variables: {
+                            tournamentIDs: tournamentIDs,
+                            eventIDs: eventIDs,
+                            perPage: 15,
+                            page: page,
+                        },
+                    }),
+                });
 
-    //                         const insertOrUpdatePlayer = `
-    //                             INSERT INTO Players(PlayerID, GamerTag, TotalWins, TotalLosses, Slug)
-    //                             VALUES($1, $2, $3, $4, $5)
-    //                             ON CONFLICT(PlayerID)
-    //                             DO UPDATE
-    //                             SET GamerTag = EXCLUDED.GamerTag,
-    //                                 Slug = EXCLUDED.Slug
-    //                         `;
+                try {
+                    results = await results.json();
 
-    //                         pg.query(insertOrUpdatePlayer, [
-    //                             playerID,
-    //                             playerGamerTag,
-    //                             0,
-    //                             0,
-    //                             playerSlug,
-    //                         ]);
+                    console.log(results);
+                    results.data.tournaments.nodes.forEach((tournament) => {
+                        var tournamentID = tournament.id;
+                        tournament.events.forEach((event) => {
+                            var eventID = event.id;
+                            if (event.entrants.nodes.length == 15)
+                                hasMore = true;
+                            event.entrants.nodes.forEach((entrant) => {
+                                if (
+                                    entrant.participants[0] &&
+                                    entrant.participants[0].player
+                                ) {
+                                    var playerID =
+                                        entrant.participants[0].player.id;
+                                    var playerGamerTag =
+                                        entrant.participants[0].player.gamerTag;
+                                    var playerSlug = "";
+                                    if (entrant.participants[0].player.user) {
+                                        playerSlug =
+                                            entrant.participants[0].player.user
+                                                .slug;
+                                    }
 
-    //                         console.log(
-    //                             `${playerID}: ${entrant.participants[0].player.gamerTag}`
-    //                         );
-    //                         if (
-    //                             !tournamentIDs
-    //                                 .get(tournamentID)
-    //                                 .get(eventID)
-    //                                 .has(playerID)
-    //                         )
-    //                             tournamentIDs
-    //                                 .get(tournamentID)
-    //                                 .get(eventID)
-    //                                 .set(playerID, []);
-    //                         tournamentIDs
-    //                             .get(tournamentID)
-    //                             .get(eventID)
-    //                             .get(playerID)
-    //                             .push(entrant.id);
-    //                     }
-    //                 });
-    //             });
-    //         });
-    //         j++;
-    //         await delay(750);
-    //     }
-    //     console.log(`${i}/${tournamentIDArray.length}`);
-    // }
+                                    const insertOrUpdatePlayer = `
+                                    INSERT INTO Players(PlayerID, GamerTag, TotalWins, TotalLosses, Slug)
+                                    VALUES($1, $2, $3, $4, $5)
+                                    ON CONFLICT(PlayerID)
+                                    DO UPDATE
+                                    SET GamerTag = EXCLUDED.GamerTag,
+                                        Slug = EXCLUDED.Slug
+                                `;
 
+                                    pg.query(insertOrUpdatePlayer, [
+                                        playerID,
+                                        playerGamerTag,
+                                        0,
+                                        0,
+                                        playerSlug,
+                                    ]);
+
+                                    players.set(entrant.id, playerID);
+
+                                    console.log(
+                                        `${playerID}: ${entrant.participants[0].player.gamerTag}`
+                                    );
+                                }
+                            });
+                        });
+                    });
+                    page++;
+                    console.log(i + "/" + events.length);
+                } catch (err) {
+                    console.log(err);
+                    hasMore = true;
+                }
+                await delay(750);
+            }
+        }
+
+        // for (var i = 0; i < tournamentIDArray.length; i += 15) {
+        //     var currentTournaments = [];
+        //     var currentEvents = [];
+        //     currentTournaments.push(...tournamentIDArray.slice(i, i + 15));
+        //     for (const key of currentTournaments) {
+        //         const eventIDArray = Array.from(tournamentIDs.get(key).keys());
+        //         //currentEvents.push(...eventIDArray);
+        //         for (const event of eventIDArray) {
+        //             currentEvents.push(event);
+        //             totalEvents++;
+        //         }
+        //     }
+        //     var hasMore = true;
+        //     var j = 1;
+        //     while (hasMore) {
+        //         hasMore = false;
+        //         var results = await fetch("https://api.start.gg/gql/alpha", {
+        //             method: "POST",
+
+        //             headers: {
+        //                 "Content-Type": "application/json",
+        //                 Authorization: "Bearer " + process.env.AUTH_TOKEN,
+        //             },
+
+        //             body: JSON.stringify({
+        //                 query: GET_PLAYERS_WITHIN_EVENT_TEST,
+        //                 variables: {
+        //                     tournamentIDs: currentTournaments,
+        //                     eventIDs: currentEvents,
+        //                     perPage: 10,
+        //                     page: j,
+        //                 },
+        //             }),
+        //         });
+
+        //         results = await results.json();
+
+        //         console.log(results);
+        //         results.data.tournaments.nodes.forEach((tournament) => {
+        //             var tournamentID = tournament.id;
+        //             tournament.events.forEach((event) => {
+        //                 var eventID = event.id;
+        //                 if (event.entrants.nodes.length == 10) hasMore = true;
+        //                 event.entrants.nodes.forEach((entrant) => {
+        //                     if (
+        //                         entrant.participants[0] &&
+        //                         entrant.participants[0].player
+        //                     ) {
+        //                         var playerID = entrant.participants[0].player.id;
+        //                         var playerGamerTag =
+        //                             entrant.participants[0].player.gamerTag;
+        //                         var playerSlug = "";
+        //                         if (entrant.participants[0].player.user) {
+        //                             playerSlug =
+        //                                 entrant.participants[0].player.user.slug;
+        //                         }
+
+        //                         const insertOrUpdatePlayer = `
+        //                             INSERT INTO Players(PlayerID, GamerTag, TotalWins, TotalLosses, Slug)
+        //                             VALUES($1, $2, $3, $4, $5)
+        //                             ON CONFLICT(PlayerID)
+        //                             DO UPDATE
+        //                             SET GamerTag = EXCLUDED.GamerTag,
+        //                                 Slug = EXCLUDED.Slug
+        //                         `;
+
+        //                         pg.query(insertOrUpdatePlayer, [
+        //                             playerID,
+        //                             playerGamerTag,
+        //                             0,
+        //                             0,
+        //                             playerSlug,
+        //                         ]);
+
+        //                         console.log(
+        //                             `${playerID}: ${entrant.participants[0].player.gamerTag}`
+        //                         );
+        //                         if (
+        //                             !tournamentIDs
+        //                                 .get(tournamentID)
+        //                                 .get(eventID)
+        //                                 .has(playerID)
+        //                         )
+        //                             tournamentIDs
+        //                                 .get(tournamentID)
+        //                                 .get(eventID)
+        //                                 .set(playerID, []);
+        //                         tournamentIDs
+        //                             .get(tournamentID)
+        //                             .get(eventID)
+        //                             .get(playerID)
+        //                             .push(entrant.id);
+        //                     }
+        //                 });
+        //             });
+        //         });
+        //         j++;
+        //         await delay(750);
+        //     }
+        //     console.log(`${i}/${tournamentIDArray.length}`);
+        // }
+
+        return players;
+    }
+}
+
+async function RetrievePlayersFromEvents3(events) {
+    const players = new Map();
+    var numEntrants = 0;
+    var highestQueryComplexity = 0;
+    var i = 0;
+    const eventIDMap = new Map();
+    while (i < events.length) {
+        var start = i;
+        while (eventIDMap.size < 20 && i < events.length) {
+            eventIDMap.set(events[i].EventID, 1);
+            i++;
+        }
+
+        const query = PlayerQueryCreation(eventIDMap.size);
+
+        var arguments = {};
+
+        var keys = Array.from(eventIDMap.keys());
+        for (var j = 0; j < keys.length; j++) {
+            arguments["E" + (j + 1)] = keys[j];
+            arguments["P" + (j + 1)] = eventIDMap.get(keys[j]);
+        }
+        arguments["perPage"] = 15;
+
+        var results = await fetch("https://api.start.gg/gql/alpha", {
+            method: "POST",
+
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: "Bearer " + process.env.AUTH_TOKEN,
+            },
+
+            body: JSON.stringify({
+                query: query,
+                variables: arguments,
+            }),
+        });
+
+        try {
+            results = await results.json();
+
+            console.log(
+                "Query Complexity: " + results.extensions.queryComplexity
+            );
+
+            highestQueryComplexity = Math.max(
+                highestQueryComplexity,
+                results.extensions.queryComplexity
+            );
+
+            var data = results.data;
+
+            for (const event in data) {
+                if (data[event]) {
+                    data[event].entrants.nodes.forEach((entrant) => {
+                        if (
+                            entrant.participants[0] &&
+                            entrant.participants[0].player
+                        ) {
+                            numEntrants++;
+                            var playerID = entrant.participants[0].player.id;
+                            var playerGamerTag =
+                                entrant.participants[0].player.gamerTag;
+                            var playerSlug = "";
+                            if (entrant.participants[0].player.user) {
+                                playerSlug =
+                                    entrant.participants[0].player.user.slug;
+                            }
+
+                            const insertOrUpdatePlayer = `
+                                    INSERT INTO Players(PlayerID, GamerTag, TotalWins, TotalLosses, Slug)
+                                    VALUES($1, $2, $3, $4, $5)
+                                    ON CONFLICT(PlayerID)
+                                    DO UPDATE
+                                    SET GamerTag = EXCLUDED.GamerTag,
+                                        Slug = EXCLUDED.Slug
+                                    `;
+
+                            pg.query(insertOrUpdatePlayer, [
+                                playerID,
+                                playerGamerTag,
+                                0,
+                                0,
+                                playerSlug,
+                            ]);
+
+                            players.set(entrant.id, playerID);
+
+                            console.log(
+                                `${playerID}: ${entrant.participants[0].player.gamerTag}`
+                            );
+                        }
+                    });
+                    if (data[event].entrants.nodes.length != 15) {
+                        eventIDMap.delete(data[event].id);
+                    } else {
+                        eventIDMap.set(
+                            data[event].id,
+                            eventIDMap.get(data[event].id) + 1
+                        );
+                    }
+                }
+            }
+            console.log(i + "/" + events.length);
+        } catch (err) {
+            console.log(err);
+            hasMore = true;
+        }
+        await delay(750);
+    }
+    console.log("Entrants: " + numEntrants);
+    console.log("Highest Query Complexity: " + highestQueryComplexity);
     return players;
 }
 
@@ -768,6 +1417,41 @@ async function test() {
     } catch (err) {
         console.error(err);
     }
+}
+
+function PlayerQueryCreation(numEvents) {
+    var query = `query (`;
+    for (var i = 0; i < numEvents; i++) {
+        query += `$E${i + 1}: ID! $P${i + 1}: Int! `;
+    }
+
+    query += `$perPage: Int!) {`;
+    for (var i = 0; i < numEvents; i++) {
+        query += `
+            E${i + 1}: event(id: $E${i + 1}) {
+                id
+                entrants(query: {
+                    perPage: $perPage
+                    page: $P${i + 1}
+                }) {
+                    nodes {
+                        id
+                        participants {
+                            player {
+                                id
+                                gamerTag
+                                user {
+                                    slug
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        `;
+    }
+    query += `}`;
+    return query;
 }
 
 app.post("/addUser", (req, res) => {});
