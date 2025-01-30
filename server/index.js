@@ -58,6 +58,9 @@ const GET_EVENTS = `
                     name
                     slug
                     updatedAt
+                    phases {
+                        id
+                    }
                 }
             }
         }
@@ -117,438 +120,6 @@ const GET_PLAYERS_WITHIN_EVENT_TEST = `
                                         slug
                                     }
                                 }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-`;
-
-const GET_PLAYERS_WITHIN_EVENT_TAKE_2 = `
-    query ($E1: ID! $E2: ID! $E3: ID! $E4: ID! $E5: ID!
-        $E6: ID! $E7: ID! $E8: ID! $E9: ID! $E10: ID!
-        $E11: ID! $E12: ID! $E13: ID! $E14: ID! $E15: ID!
-        $E16: ID! $E17: ID! $E18: ID! $E19: ID! $E20: ID!
-        $P1: Int! $P2: Int! $P3: Int! $P4: Int! $P5: Int!
-        $P6: Int! $P7: Int! $P8: Int! $P9: Int! $P10: Int!
-        $P11: Int! $P12: Int! $P13: Int! $P14: Int! $P15: Int!
-        $P16: Int! $P17: Int! $P18: Int! $P19: Int! $P20: Int!
-        $perPage: Int!) {
-        E1: event(id: $E1) {
-            id
-            entrants(query: {
-                perPage: $perPage
-                page: $P1
-            }) {
-                nodes {
-                    id
-                    participants {
-                        player {
-                            id
-                            gamerTag
-                            user {
-                                slug
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        E2: event(id: $E2) {
-            id
-            entrants(query: {
-                perPage: $perPage
-                page: $P2
-            }) {
-                nodes {
-                    id
-                    participants {
-                        player {
-                            id
-                            gamerTag
-                            user {
-                                slug
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        E3: event(id: $E3) {
-            id
-            entrants(query: {
-                perPage: $perPage
-                page: $P3
-            }) {
-                nodes {
-                    id
-                    participants {
-                        player {
-                            id
-                            gamerTag
-                            user {
-                                slug
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        E4: event(id: $E4) {
-            id
-            entrants(query: {
-                perPage: $perPage
-                page: $P4
-            }) {
-                nodes {
-                    id
-                    participants {
-                        player {
-                            id
-                            gamerTag
-                            user {
-                                slug
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        E5: event(id: $E5) {
-            id
-            entrants(query: {
-                perPage: $perPage
-                page: $P5
-            }) {
-                nodes {
-                    id
-                    participants {
-                        player {
-                            id
-                            gamerTag
-                            user {
-                                slug
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        E6: event(id: $E6) {
-            id
-            entrants(query: {
-                perPage: $perPage
-                page: $P6
-            }) {
-                nodes {
-                    id
-                    participants {
-                        player {
-                            id
-                            gamerTag
-                            user {
-                                slug
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        E7: event(id: $E7) {
-            id
-            entrants(query: {
-                perPage: $perPage
-                page: $P7
-            }) {
-                nodes {
-                    id
-                    participants {
-                        player {
-                            id
-                            gamerTag
-                            user {
-                                slug
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        E8: event(id: $E8) {
-            id
-            entrants(query: {
-                perPage: $perPage
-                page: $P8
-            }) {
-                nodes {
-                    id
-                    participants {
-                        player {
-                            id
-                            gamerTag
-                            user {
-                                slug
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        E9: event(id: $E9) {
-            id
-            entrants(query: {
-                perPage: $perPage
-                page: $P9
-            }) {
-                nodes {
-                    id
-                    participants {
-                        player {
-                            id
-                            gamerTag
-                            user {
-                                slug
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        E10: event(id: $E10) {
-            id
-            entrants(query: {
-                perPage: $perPage
-                page: $P10
-            }) {
-                nodes {
-                    id
-                    participants {
-                        player {
-                            id
-                            gamerTag
-                            user {
-                                slug
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        E11: event(id: $E11) {
-            id
-            entrants(query: {
-                perPage: $perPage
-                page: $P11
-            }) {
-                nodes {
-                    id
-                    participants {
-                        player {
-                            id
-                            gamerTag
-                            user {
-                                slug
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        E12: event(id: $E12) {
-            id
-            entrants(query: {
-                perPage: $perPage
-                page: $P12
-            }) {
-                nodes {
-                    id
-                    participants {
-                        player {
-                            id
-                            gamerTag
-                            user {
-                                slug
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        E13: event(id: $E13) {
-            id
-            entrants(query: {
-                perPage: $perPage
-                page: $P13
-            }) {
-                nodes {
-                    id
-                    participants {
-                        player {
-                            id
-                            gamerTag
-                            user {
-                                slug
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        E14: event(id: $E14) {
-            id
-            entrants(query: {
-                perPage: $perPage
-                page: $P14
-            }) {
-                nodes {
-                    id
-                    participants {
-                        player {
-                            id
-                            gamerTag
-                            user {
-                                slug
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        E15: event(id: $E15) {
-            id
-            entrants(query: {
-                perPage: $perPage
-                page: $P15
-            }) {
-                nodes {
-                    id
-                    participants {
-                        player {
-                            id
-                            gamerTag
-                            user {
-                                slug
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        E16: event(id: $E16) {
-            id
-            entrants(query: {
-                perPage: $perPage
-                page: $P16
-            }) {
-                nodes {
-                    id
-                    participants {
-                        player {
-                            id
-                            gamerTag
-                            user {
-                                slug
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        E17: event(id: $E17) {
-            id
-            entrants(query: {
-                perPage: $perPage
-                page: $P17
-            }) {
-                nodes {
-                    id
-                    participants {
-                        player {
-                            id
-                            gamerTag
-                            user {
-                                slug
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        E18: event(id: $E18) {
-            id
-            entrants(query: {
-                perPage: $perPage
-                page: $P18
-            }) {
-                nodes {
-                    id
-                    participants {
-                        player {
-                            id
-                            gamerTag
-                            user {
-                                slug
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        E19: event(id: $E19) {
-            id
-            entrants(query: {
-                perPage: $perPage
-                page: $P19
-            }) {
-                nodes {
-                    id
-                    participants {
-                        player {
-                            id
-                            gamerTag
-                            user {
-                                slug
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        E20: event(id: $E20) {
-            id
-            entrants(query: {
-                perPage: $perPage
-                page: $P20
-            }) {
-                nodes {
-                    id
-                    participants {
-                        player {
-                            id
-                            gamerTag
-                            user {
-                                slug
                             }
                         }
                     }
@@ -708,9 +279,17 @@ app.get("/", async (req, res) => {
 
 app.get("/GetInfo", async (req, res) => {
     var tournamentIds = await FetchTournaments();
-    var events = await RetrieveEventsBasedOnTournaments(tournamentIds);
+    var eventPhases = {};
+    var events = await RetrieveEventsBasedOnTournaments(
+        tournamentIds,
+        eventPhases
+    );
+    var setIDs = await RetrieveSetIDsFromEventPhases(eventPhases);
     //var playerMap = await RetrievePlayersFromEvents(events, tournamentIds);
     var players = await RetrievePlayersFromEvents3(events);
+    const jsonMap = JSON.stringify([...players]);
+    fs.writeFileSync("playerMap.json", jsonMap);
+    await SetRetrieval(players);
     res.writeHead(200, { "Content-Type": "application/json" });
     res.end(JSON.stringify(tournamentIds));
 });
@@ -811,11 +390,11 @@ async function FetchTournaments() {
     return tournamentIds;
 }
 
-async function RetrieveEventsBasedOnTournaments(tournamentIds) {
+async function RetrieveEventsBasedOnTournaments(tournamentIds, eventPhases) {
     var outdatedEvents = [];
     var totalEvents = 0;
     var i = 0;
-    var groupSize = 500;
+    var groupSize = 350;
     const groupedIds = [];
     for (let i = 0; i < tournamentIds.length; i += groupSize) {
         groupedIds.push(tournamentIds.slice(i, i + groupSize));
@@ -848,7 +427,7 @@ async function RetrieveEventsBasedOnTournaments(tournamentIds) {
             body: JSON.stringify({
                 query: GET_EVENTS,
                 variables: {
-                    perPage: 500,
+                    perPage: 350,
                     tournamentIDs: groupedIds[i],
                     SF6: 43868,
                 },
@@ -895,6 +474,18 @@ async function RetrieveEventsBasedOnTournaments(tournamentIds) {
                         EventID: event.id,
                         TournamentID: id,
                     });
+
+                    var phaseIDs = [];
+                    if (event.phases) {
+                        event.phases.forEach((phase) => {
+                            phaseIDs.push(phase.id);
+                        });
+                    }
+
+                    eventPhases[event.id] = {
+                        PhaseIDs: phaseIDs,
+                    };
+                    console.log(phaseIDs);
                 }
             });
         });
@@ -1398,10 +989,264 @@ async function RetrievePlayersFromEvents3(events) {
     return players;
 }
 
+// async function SetRetrieval(playerMap) {
+//     var i = 0;
+//     var entrantIDs = Array.from(playerMap.keys());
+//     var highestQueryComplexity = 0;
+//     var entrants = new Map();
+//     while (i < entrantIDs.length) {
+//         var arguments = {};
+//         while (entrants.size < 40 && i < entrantIDs.length) {
+//             entrants.set(entrantIDs[i], 1);
+//             i++;
+//         }
+
+//         var keys = Array.from(entrants.keys());
+//         for (var j = 0; j < keys.length; j++) {
+//             arguments["E" + (j + 1)] = keys[j];
+//             arguments["P" + (j + 1)] = entrants.get(keys[j]);
+//         }
+//         arguments["perPage"] = 2;
+
+//         var query = SetQueryCreation(entrants.size);
+
+//         var results = await fetch("https://api.start.gg/gql/alpha", {
+//             method: "POST",
+
+//             headers: {
+//                 "Content-Type": "application/json",
+//                 Authorization: "Bearer " + process.env.AUTH_TOKEN,
+//             },
+
+//             body: JSON.stringify({
+//                 query: query,
+//                 variables: arguments,
+//             }),
+//         });
+
+//         try {
+//             results = await results.json();
+
+//             console.log(results);
+
+//             highestQueryComplexity = Math.max(
+//                 highestQueryComplexity,
+//                 results.extensions.queryComplexity
+//             );
+
+//             var data = results.data;
+
+//             for (const entrant in data) {
+//                 if (data[entrant]) {
+//                     const mainEntrantID = data[entrant].id;
+//                     data[entrant].paginatedSets.nodes.forEach((set) => {
+//                         const setID = set.id;
+//                         set.slots.forEach((slot) => {
+//                             if (
+//                                 slot.standing &&
+//                                 slot.standing.stats &&
+//                                 slot.standing.stats.score
+//                             ) {
+//                                 console.log(
+//                                     "Value: " + slot.standing.stats.score.value
+//                                 );
+//                                 console.log(
+//                                     "Display Value: " +
+//                                         slot.standing.stats.score.displayValue
+//                                 );
+//                             }
+//                         });
+//                         const winnerEntrantID = set.winnerId;
+//                     });
+
+//                     if (data[entrant].paginatedSets.nodes.length == 2) {
+//                         entrants.set(
+//                             mainEntrantID,
+//                             entrants.get(mainEntrantID) + 1
+//                         );
+//                     } else {
+//                         entrants.delete(mainEntrantID);
+//                     }
+//                 }
+//             }
+//             console.log("Highest Query Complexity: " + highestQueryComplexity);
+//             console.log(i + "/" + entrantIDs.length);
+//         } catch (err) {
+//             console.log(err);
+//         }
+//         await delay(750);
+//     }
+// }
+
 async function SetRetrieval(playerMap) {
-    const getTournamentIDsFromDB = "SELECT TournamentID FROM Tournaments";
-    const res = await pg.query(getTournamentIDsFromDB);
-    const tournamentIDs = res.rows;
+    var i = 0;
+    var entrantIDs = Array.from(playerMap.keys());
+    var highestQueryComplexity = 0;
+    var entrants = new Map();
+    var setIDs = [];
+    while (i < entrantIDs.length) {
+        var arguments = {};
+        while (entrants.size < 200 && i < entrantIDs.length) {
+            entrants.set(entrantIDs[i], 1);
+            i++;
+        }
+
+        var keys = Array.from(entrants.keys());
+        for (var j = 0; j < keys.length; j++) {
+            arguments["E" + (j + 1)] = keys[j];
+            arguments["P" + (j + 1)] = entrants.get(keys[j]);
+        }
+        arguments["perPage"] = 15;
+
+        var query = SetQueryCreation(entrants.size);
+
+        var results = await fetch("https://api.start.gg/gql/alpha", {
+            method: "POST",
+
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: "Bearer " + process.env.AUTH_TOKEN,
+            },
+
+            body: JSON.stringify({
+                query: query,
+                variables: arguments,
+            }),
+        });
+
+        try {
+            results = await results.json();
+
+            console.log(results);
+
+            highestQueryComplexity = Math.max(
+                highestQueryComplexity,
+                results.extensions.queryComplexity
+            );
+
+            var data = results.data;
+
+            for (const entrant in data) {
+                if (data[entrant]) {
+                    const mainEntrantID = data[entrant].id;
+                    data[entrant].paginatedSets.nodes.forEach((set) => {
+                        if (setIDs.indexOf(set.id) == -1) setIDs.push(set.id);
+                    });
+
+                    if (data[entrant].paginatedSets.nodes.length == 15) {
+                        entrants.set(
+                            mainEntrantID,
+                            entrants.get(mainEntrantID) + 1
+                        );
+                    } else {
+                        entrants.delete(mainEntrantID);
+                    }
+                }
+            }
+            console.log("Highest Query Complexity: " + highestQueryComplexity);
+            console.log(i + "/" + entrantIDs.length);
+        } catch (err) {
+            console.log(err);
+        }
+        await delay(750);
+    }
+    return setIDs;
+}
+
+async function RetrieveSetIDsFromEventPhases(eventPhases) {
+    var args = {};
+    var i = 0;
+    var setIDs = [];
+    var highestQueryComplexity = 0;
+    const eventKeys = Object.keys(eventPhases);
+    while (i < eventKeys.length) {
+        while (Object.keys(args).length < 500 && i < eventKeys.length) {
+            if (eventPhases[eventKeys[i]].PhaseIDs.length != 0) {
+                args[eventKeys[i]] = {
+                    PhasePos: 0,
+                    page: 1,
+                };
+            }
+            i++;
+        }
+
+        var arguments = {};
+        var j = 1;
+        for (const eventID in args) {
+            arguments[`eventID${j}`] = eventID;
+            arguments[`phaseID${j}`] =
+                eventPhases[eventID].PhaseIDs[args[eventID].PhasePos];
+            arguments[`page${j}`] = args[eventID].page;
+            j++;
+        }
+
+        arguments[`perPage`] = 15;
+
+        var query = SetQueryCreation(Object.keys(args).length);
+
+        var results = await fetch("https://api.start.gg/gql/alpha", {
+            method: "POST",
+
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: "Bearer " + process.env.AUTH_TOKEN,
+            },
+
+            body: JSON.stringify({
+                query: query,
+                variables: arguments,
+            }),
+        });
+
+        try {
+            results = await results.json();
+
+            console.log(results);
+
+            highestQueryComplexity = Math.max(
+                highestQueryComplexity,
+                results.extensions.queryComplexity
+            );
+
+            var data = results.data;
+
+            for (const event in data) {
+                if (data[event]) {
+                    var id = data[event].id;
+                    console.log("EventID: " + id);
+                    console.log(
+                        `Phase position: ${args[id].PhasePos} and PhaseID: ${
+                            eventPhases[id].PhaseIDs[args[id].PhasePos]
+                        }`
+                    );
+                    console.log("Current page: " + args[id].page);
+                    data[event].sets.nodes.forEach((set) => {
+                        setIDs.push(set.id);
+                    });
+
+                    if (data[event].sets.nodes.length == 15) {
+                        args[id].page += 1;
+                    } else {
+                        if (
+                            args[id].PhasePos + 1 <
+                            eventPhases[id].PhaseIDs.length
+                        ) {
+                            args[id].PhasePos += 1;
+                        } else {
+                            delete args[id];
+                        }
+                    }
+                }
+            }
+
+            console.log("Highest Query Complexity: " + highestQueryComplexity);
+            console.log(i + "/" + eventKeys.length);
+        } catch (err) {
+            console.error(err);
+        }
+        await delay(750);
+    }
+    return setIDs;
 }
 
 async function test() {
@@ -1454,7 +1299,103 @@ function PlayerQueryCreation(numEvents) {
     return query;
 }
 
+// function SetQueryCreation(numPlayers) {
+//     var query = `query (`;
+//     for (var i = 0; i < numPlayers; i++) {
+//         query += `$E${i + 1}: ID! $P${i + 1}: Int! `;
+//     }
+
+//     query += `$perPage: Int!) {`;
+
+//     for (var i = 0; i < numPlayers; i++) {
+//         query += `E${i + 1}: entrant(id: $E${i + 1}) {
+//             id
+//             paginatedSets(perPage: $perPage page: $P${i + 1}) {
+//                 nodes {
+//                     id
+//                     slots {
+//                         id
+//                         standing {
+//                             id
+//                             stats {
+//                                 score {
+//                                     value
+//                                     displayValue
+//                                 }
+//                             }
+//                         }
+//                     }
+//                     winnerId
+//                 }
+//             }
+//         }`;
+//     }
+//     query += `}`;
+//     return query;
+// }
+
+// function SetQueryCreation(numPlayers) {
+//     var query = `query (`;
+//     for (var i = 0; i < numPlayers; i++) {
+//         query += `$E${i + 1}: ID! $P${i + 1}: Int! `;
+//     }
+
+//     query += `$perPage: Int!) {`;
+
+//     for (var i = 0; i < numPlayers; i++) {
+//         query += `E${i + 1}: entrant(id: $E${i + 1}) {
+//             id
+//             paginatedSets(perPage: $perPage page: $P${i + 1}) {
+//                 nodes {
+//                     id
+//                 }
+//             }
+//         }`;
+//     }
+//     query += `}`;
+//     return query;
+// }
+
+function SetQueryCreation(numEvents) {
+    var query = `query (`;
+    for (var i = 0; i < numEvents; i++) {
+        query += `$eventID${i + 1}: ID! $phaseID${i + 1}: ID! $page${
+            i + 1
+        }: Int! `;
+    }
+
+    query += `$perPage: Int!) {`;
+
+    for (var i = 0; i < numEvents; i++) {
+        query += `E${i + 1}: event(id: $eventID${i + 1}) {
+            id
+            sets(page: $page${i + 1} perPage: $perPage filters: {
+                phaseIds: [$phaseID${i + 1}]
+            }) {
+                nodes {
+                    id
+                }
+            }
+        }`;
+    }
+    query += `}`;
+    return query;
+}
+
 app.post("/addUser", (req, res) => {});
+
+app.get("/testSetRetrieval", async (req, res) => {
+    const players = fs
+        .readFileSync(path.resolve(__dirname, "./playerMap.json"))
+        .toString();
+    const playersJSON = JSON.parse(players);
+    var playerMap = new Map();
+    for (var i = 0; i < playersJSON.length; i++) {
+        playerMap.set(playersJSON[i][0], playersJSON[i][1]);
+    }
+
+    var setIDs = await SetRetrieval(playerMap);
+});
 
 app.get("/getPlayers", async (req, res) => {
     const query = "SELECT EventId FROM Events;";
