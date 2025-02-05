@@ -95,6 +95,7 @@ function SetQueryCreation(numSets) {
             slots {
                 entrant {
                     id
+                    name
                 }
             }
             displayScore

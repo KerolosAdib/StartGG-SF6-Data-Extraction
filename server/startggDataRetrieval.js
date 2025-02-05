@@ -273,17 +273,17 @@ async function RetrieveSetIDsFromEventPhases(eventPhases) {
             i++;
         }
 
-        var args = {};
+        var queryArgs = {};
         var j = 1;
         for (const eventID in args) {
-            args[`eventID${j}`] = eventID;
-            args[`phaseID${j}`] =
+            queryArgs[`eventID${j}`] = eventID;
+            queryArgs[`phaseID${j}`] =
                 eventPhases[eventID].PhaseIDs[args[eventID].PhasePos];
-            args[`page${j}`] = args[eventID].page;
+            queryArgs[`page${j}`] = args[eventID].page;
             j++;
         }
 
-        args[`perPage`] = 15;
+        queryArgs[`perPage`] = 15;
 
         var query = SetIDQueryCreation(Object.keys(args).length);
 
@@ -297,7 +297,7 @@ async function RetrieveSetIDsFromEventPhases(eventPhases) {
 
             body: JSON.stringify({
                 query: query,
-                variables: args,
+                variables: queryArgs,
             }),
         });
 
@@ -367,14 +367,14 @@ async function RetrievePlayersFromEvents(events) {
 
         const query = PlayerQueryCreation(eventIDMap.size);
 
-        var args = {};
+        var queryArgs = {};
 
         var keys = Array.from(eventIDMap.keys());
         for (var j = 0; j < keys.length; j++) {
-            args["E" + (j + 1)] = keys[j];
-            args["P" + (j + 1)] = eventIDMap.get(keys[j]);
+            queryArgs["E" + (j + 1)] = keys[j];
+            queryArgs["P" + (j + 1)] = eventIDMap.get(keys[j]);
         }
-        args["perPage"] = 15;
+        queryArgs["perPage"] = 15;
 
         var results = await fetch("https://api.start.gg/gql/alpha", {
             method: "POST",
@@ -386,7 +386,7 @@ async function RetrievePlayersFromEvents(events) {
 
             body: JSON.stringify({
                 query: query,
-                variables: args,
+                variables: queryArgs,
             }),
         });
 
@@ -478,10 +478,10 @@ async function RetieveSetInfoWithSetIDs(setIDs, players) {
         }
 
         var query = SetQueryCreation(setIDArgs.length);
-        var args = {};
+        var queryArgs = {};
 
         for (var j = 0; j < setIDArgs.length; j++) {
-            args["setID" + (j + 1)] = setIDArgs[j];
+            queryArgs["setID" + (j + 1)] = setIDArgs[j];
         }
 
         var results = await fetch("https://api.start.gg/gql/alpha", {
@@ -494,7 +494,7 @@ async function RetieveSetInfoWithSetIDs(setIDs, players) {
 
             body: JSON.stringify({
                 query: query,
-                variables: args,
+                variables: queryArgs,
             }),
         });
         try {
@@ -513,8 +513,10 @@ async function RetieveSetInfoWithSetIDs(setIDs, players) {
                 var j = 1;
                 if (data[set].slots) {
                     data[set].slots.forEach((slot) => {
-                        if (slot.entrant)
-                            console.log(`Player ${j}: ${slot.entrant.id}`);
+                        if (slot.entrant) {
+                            console.log(`ID ${j}: ${slot.entrant.id}`);
+                            console.log(`Player ${j}: ${slot.entrant.name}`);
+                        }
                         j++;
                     });
                 }

@@ -49,8 +49,9 @@ app.get("/GetInfo", async (req, res) => {
         eventPhases
     );
     var setIDs = await RetrieveSetIDsFromEventPhases(eventPhases);
-    var players = await RetrievePlayersFromEvents(events);
     await RetieveSetInfoWithSetIDs(setIDs, players);
+    var players = await RetrievePlayersFromEvents(events);
+
     const jsonMap = JSON.stringify([...players]);
     fs.writeFileSync("playerMap.json", jsonMap);
     res.writeHead(200, { "Content-Type": "application/json" });
