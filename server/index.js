@@ -31,14 +31,9 @@ const pg = new PG.Pool({
 });
 
 app.get("/", async (req, res) => {
-    // new sql.Request().query("SELECT * FROM Players", (err, result) => {
-    //     if (err) {
-    //         console.error(err);
-    //     } else {
-    //         res.send(result.recordset);
-    //         console.log(result.recordset);
-    //     }
-    // });
+    const scoreRegex = /^(.*)\s(\d+|W|L)\s-\s(.*)\s(\d+|W|L)$/i;
+    const example = "name 3 - other 2 3 -     0";
+    const match = example.match(scoreRegex);
 });
 
 app.get("/GetInfo", async (req, res) => {
@@ -49,8 +44,8 @@ app.get("/GetInfo", async (req, res) => {
         eventPhases
     );
     var setIDs = await RetrieveSetIDsFromEventPhases(eventPhases);
-    await RetieveSetInfoWithSetIDs(setIDs, players);
     var players = await RetrievePlayersFromEvents(events);
+    await RetieveSetInfoWithSetIDs(setIDs, players);
 
     const jsonMap = JSON.stringify([...players]);
     fs.writeFileSync("playerMap.json", jsonMap);
