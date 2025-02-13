@@ -19,6 +19,7 @@ const GET_TOURNAMENTS = `
                 name
                 slug
                 startAt
+                createdAt
                 updatedAt
             }
         }

@@ -9,6 +9,7 @@ const {
     CreateTables,
     ViewPlayers,
     FetchTournaments,
+    RetrieveRRTournaments,
     RetrieveEventsBasedOnTournaments,
     RetrievePlayersFromEvents,
     RetrieveSetIDsFromEventPhases,
@@ -22,14 +23,6 @@ require("dotenv").config();
 const app = express();
 app.use(cors());
 
-const pg = new PG.Pool({
-    user: process.env.PGUSER,
-    password: process.env.PGPASSWORD,
-    host: process.env.PGHOST,
-    database: process.env.PGDATABASE,
-    port: process.env.PGPORT,
-});
-
 app.get("/", async (req, res) => {
     // new sql.Request().query("SELECT * FROM Players", (err, result) => {
     //     if (err) {
@@ -42,6 +35,7 @@ app.get("/", async (req, res) => {
 });
 
 app.get("/GetInfo", async (req, res) => {
+    await CreateTables(false);
     var tournamentIds = await FetchTournaments();
     var eventPhases = {};
     var events = await RetrieveEventsBasedOnTournaments(
@@ -56,6 +50,12 @@ app.get("/GetInfo", async (req, res) => {
     fs.writeFileSync("playerMap.json", jsonMap);
     res.writeHead(200, { "Content-Type": "application/json" });
     res.end(JSON.stringify(tournamentIds));
+});
+
+app.get("/getRainierRushdownInfo", async (req, res) => {
+    await CreateTables(true);
+    var tournamentIds = await RetrieveRRTournaments();
+    res.send(tournamentIds);
 });
 
 app.post("/addUser", (req, res) => {});
@@ -84,8 +84,6 @@ app.get("/clear", async (req, res) => {
 });
 
 CheckConnection();
-
-CreateTables();
 
 ViewPlayers();
 

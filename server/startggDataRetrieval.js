@@ -20,6 +20,14 @@ const pg = new PG.Pool({
     port: process.env.PGPORT,
 });
 
+const pgRR = new PG.Pool({
+    user: process.env.PGUSER,
+    password: process.env.PGPASSWORD,
+    host: process.env.PGHOST,
+    database: process.env.PGDATABASERR,
+    port: process.env.PGPORT,
+});
+
 const delay = (time) => new Promise((resolve) => setTimeout(resolve, time));
 
 async function CheckConnection() {
@@ -32,12 +40,14 @@ async function CheckConnection() {
     }
 }
 
-async function CreateTables() {
+async function CreateTables(forRR) {
     try {
-        var table = fs
+        let table = fs
             .readFileSync(path.resolve(__dirname, "./tableCreation.sql"))
             .toString();
-        const res = await pg.query(table);
+        let res;
+        if (forRR) res = await pgRR.query(table);
+        else res = await pg.query(table);
         console.log(res.rows);
     } catch (err) {
         console.error(err);
@@ -145,6 +155,107 @@ async function FetchTournaments() {
             }
             page++;
             await delay(1000);
+        }
+        i++;
+    }
+    return tournamentIds;
+}
+
+async function RetrieveRRTournaments() {
+    var hasMore = true;
+    var tournamentIds = [];
+    var date = new Date(1000);
+    var i = 1;
+    const getCurrentTournamentInfo = "SELECT * FROM Tournaments;";
+    const res = await pgRR.query(getCurrentTournamentInfo);
+    const map = res.rows.reduce((map, obj) => {
+        const { tournamentid, latestupdate, tournamentname, slug } = obj;
+        map[tournamentid] = { latestupdate, tournamentname, slug };
+        return map;
+    }, {});
+
+    while (hasMore) {
+        var page = 1;
+        while (page <= 20 && hasMore) {
+            var results = await fetch("https://api.start.gg/gql/alpha", {
+                method: "POST",
+
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: "Bearer " + process.env.AUTH_TOKEN,
+                },
+
+                body: JSON.stringify({
+                    query: GET_TOURNAMENTS,
+                    variables: {
+                        page: page,
+                        perPage: 500,
+                        SF6: 43868,
+                        AfterDate: date.getTime() / 1000,
+                    },
+                }),
+            });
+            results = await results.json();
+            console.log(results);
+            hasMore = results.data.tournaments.nodes.length == 500;
+            var j = 1;
+            results.data.tournaments.nodes.forEach((tournament) => {
+                var totalIds = (i - 1) * 10000 + (page - 1) * 500 + j;
+                //var idIndex = Math.floor((totalIds - 1) / 10);
+                if (
+                    tournament.name.toLowerCase().includes("rainier rushdown")
+                ) {
+                    console.log(totalIds);
+                    if (
+                        !map[tournament.id] ||
+                        (map[tournament.id] &&
+                            map[tournament.id].latestupdate / 1000 <
+                                tournament.updatedAt)
+                    ) {
+                        var log = `
+                    {
+                        CurrentEntry: ${totalIds}
+                        id: ${tournament.id},
+                        Name: ${tournament.name},
+                        Slug: ${tournament.slug},
+                        startAt: ${tournament.startAt},
+                    }
+                    `;
+
+                        // fs.appendFile("log.txt", log, (err) => {
+                        //     if (err) throw err;
+                        // });
+
+                        const insert = `
+                        INSERT INTO Tournaments(TournamentID, CreatedAt, LatestUpdate, TournamentName, Slug)
+                        VALUES($1, TO_TIMESTAMP($2), TO_TIMESTAMP($3), $4, $5)
+                        ON CONFLICT(TournamentID)
+                        DO UPDATE
+                        SET LatestUpdate = EXCLUDED.LatestUpdate,
+                            TournamentName = EXCLUDED.TournamentName,
+                            Slug = EXCLUDED.Slug
+                        WHERE Tournaments.LatestUpdate != EXCLUDED.LatestUpdate;
+                    `;
+                        pgRR.query(insert, [
+                            tournament.id,
+                            tournament.createdAt,
+                            tournament.updatedAt,
+                            tournament.name,
+                            tournament.slug,
+                        ]);
+                        tournamentIds.push(tournament.id);
+                    }
+                }
+                j++;
+            });
+
+            if (page == 20 && hasMore) {
+                date.setTime(
+                    results.data.tournaments.nodes[499].startAt * 1000
+                );
+            }
+            page++;
+            await delay(750);
         }
         i++;
     }
@@ -568,6 +679,7 @@ module.exports = {
     CreateTables,
     ViewPlayers,
     FetchTournaments,
+    RetrieveRRTournaments,
     RetrieveEventsBasedOnTournaments,
     RetrieveSetIDsFromEventPhases,
     RetrievePlayersFromEvents,

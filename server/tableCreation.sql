@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS Stats(
 
 CREATE TABLE IF NOT EXISTS Tournaments(
     TournamentID INT PRIMARY KEY NOT NULL,
+    CreatedAt TIMESTAMP,
     LatestUpdate TIMESTAMP,
     TournamentName VARCHAR(255),
     Slug VARCHAR(255) NOT NULL
