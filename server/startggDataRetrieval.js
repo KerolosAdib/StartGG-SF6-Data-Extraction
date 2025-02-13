@@ -624,7 +624,9 @@ async function RetieveSetInfoWithSetIDs(setIDs, players) {
                 var j = 1;
                 if (data[set].slots) {
                     data[set].slots.forEach((slot) => {
+                        var entrants = [];
                         if (slot.entrant) {
+                            entrants.push(slot.entrant.id);
                             console.log(`ID ${j}: ${slot.entrant.id}`);
                             console.log(`Player ${j}: ${slot.entrant.name}`);
                         }
@@ -632,7 +634,24 @@ async function RetieveSetInfoWithSetIDs(setIDs, players) {
                     });
                 }
 
-                console.log(data[set].displayScore);
+                const score = data[set].displayScore;
+
+                console.log(score);
+                if (score != "DQ") {
+                    const scoreRegex = /^(.*)\s(\d+|W|L)\s-\s(.*)\s(\d+|W|L)$/i;
+                    const match = score.match(scoreRegex);
+
+                    const insertOrUpdateSet = `
+                        INSERT INTO Sets(SetID, EventID, PlayerOneID, PlayerTwoID, PlayerOneWins, PlayerTwoWins, WinnerID)
+                        VALUES($1, $2, $3, $4, $5, $6, $7)
+                        ON CONFLICT(SetID)
+                        DO UPDATE
+                        SET PlayerOneID = EXCLUDED.PlayerOneID,
+                            PlayerTwoID = EXCLUDED.PlayerTwoID,
+                            PlayerOneWins = EXCLUDED.PlayerOneWins,
+                            PlayerTwoWins = EXCLUDED.PlayerTwoWins
+                    `;
+                }
                 console.log(data[set].winnerId);
             }
 

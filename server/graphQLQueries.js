@@ -98,6 +98,10 @@ function SetQueryCreation(numSets) {
                     id
                     name
                 }
+
+                standing {
+                    
+                }
             }
             displayScore
             winnerId
