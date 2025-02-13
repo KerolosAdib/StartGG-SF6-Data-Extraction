@@ -1,3 +1,0 @@
-DELETE FROM Players;
-DELETE FROM Events;
-DELETE FROM Tournaments;
