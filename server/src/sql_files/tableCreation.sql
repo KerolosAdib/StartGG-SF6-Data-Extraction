@@ -6,13 +6,21 @@ CREATE TABLE IF NOT EXISTS Players(
     Slug VARCHAR(255)
 );
 
-CREATE TABLE IF NOT EXISTS Stats(
+CREATE TABLE IF NOT EXISTS PlayerStats (
+    PlayerID INT PRIMARY KEY REFERENCES Players(PlayerID),
+    TotalSetWins INT DEFAULT 0 CHECK (TotalSetWins >= 0),
+    TotalSetLosses INT DEFAULT 0 CHECK (TotalSetLosses >= 0),
+    TotalGameWins INT DEFAULT 0 CHECK (TotalGameWins >= 0),
+    TotalGameLosses INT DEFAULT 0 CHECK (TotalGameLosses >= 0)
+);
+
+CREATE TABLE IF NOT EXISTS HeadToHeadStats(
     PlayerOneID INT REFERENCES Players(PlayerID),
     PlayerTwoID INT REFERENCES Players(PlayerID),
-    PlayerOneSetWins INT CHECK (PlayerOneSetWins >= 0),
-    PlayerTwoSetWins INT CHECK (PlayerTwoSetWins >= 0),
-    PlayerOneGameWins INT CHECK (PlayerOneGameWins >= 0),
-    PlayerTwoGameWins INT CHECK (PlayerTwoGameWins >= 0),
+    PlayerOneSetWins INT DEFAULT 0 CHECK (PlayerOneSetWins >= 0),
+    PlayerTwoSetWins INT DEFAULT 0 CHECK (PlayerTwoSetWins >= 0),
+    PlayerOneGameWins INT DEFAULT 0 CHECK (PlayerOneGameWins >= 0),
+    PlayerTwoGameWins INT DEFAULT 0 CHECK (PlayerTwoGameWins >= 0),
     PRIMARY KEY(PlayerOneID, PlayerTwoID),
     CONSTRAINT Stats_PlayerSetIds_Check CHECK (PlayerOneID != PlayerTwoID)
 );

@@ -1,5 +1,6 @@
 DROP TABLE Sets;
 DROP TABLE Events;
 DROP TABLE Tournaments;
-DROP TABLE Stats;
+DROP TABLE HeadToHeadStats;
+DROP TABLE PlayerStats;
 DROP TABLE Players;

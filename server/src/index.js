@@ -6,7 +6,6 @@ const path = require("path");
 
 const {
     CheckConnection,
-    CreateTables,
     ViewPlayers,
     FetchTournaments,
     //RetrieveRRTournaments,
@@ -15,11 +14,13 @@ const {
     RetrieveSetIDsFromEventPhases,
     RetieveSetInfoWithSetIDs,
     Test,
-    ClearTables,
-    DropTables,
+    ExecuteQuery,
+    GetSQLFileNames,
 } = require("./startggDataRetrieval");
 
 require("dotenv").config();
+
+const sqlQueries = [];
 
 const app = express();
 
@@ -48,7 +49,7 @@ app.get("/", async (req, res) => {
 });
 
 app.get("/GetInfo", async (req, res) => {
-    await CreateTables(false);
+    await ExecuteQuery(pg, sqlQueries[4]);
     let tournamentIds = await FetchTournaments();
     let eventPhases = {};
     let exceededEntries = {};
@@ -72,7 +73,7 @@ app.get("/GetInfo", async (req, res) => {
 });
 
 app.get("/getRainierRushdownInfo", async (req, res) => {
-    await CreateTables(pgRR);
+    await ExecuteQuery(pgRR, sqlQueries[4]);
     let eventPhases = {};
     let setIDEvents = {};
     let exceededEntries = [];
@@ -82,7 +83,7 @@ app.get("/getRainierRushdownInfo", async (req, res) => {
         tournamentIDs,
         eventPhases
     );
-    let entrantPlayers = await RetrievePlayersFromEvents(pg, eventIDs);
+    let entrantPlayers = await RetrievePlayersFromEvents(pgRR, eventIDs);
     let setIDs = await RetrieveSetIDsFromEventPhases(
         eventPhases,
         setIDEvents,
@@ -90,6 +91,8 @@ app.get("/getRainierRushdownInfo", async (req, res) => {
     );
 
     await RetieveSetInfoWithSetIDs(pgRR, setIDs, entrantPlayers, setIDEvents);
+    await ExecuteQuery(pgRR, sqlQueries[1]);
+    await ExecuteQuery(pgRR, sqlQueries[0]);
     res.send(setIDs);
 });
 
@@ -120,7 +123,7 @@ app.get("/testSetIDRetrieval", async (req, res) => {
 });
 
 app.get("/clear", async (req, res) => {
-    if (await ClearTables(false)) {
+    if (await ExecuteQuery(pg, sqlQueries[3])) {
         res.send("Tables Cleared");
         console.log("Tables Cleared");
     } else {
@@ -130,7 +133,7 @@ app.get("/clear", async (req, res) => {
 });
 
 app.get("/clearRR", async (req, res) => {
-    if (await ClearTables(true)) {
+    if (await ExecuteQuery(pgRR, sqlQueries[3])) {
         res.send("Tables Cleared");
         console.log("Tables Cleared");
     } else {
@@ -140,7 +143,7 @@ app.get("/clearRR", async (req, res) => {
 });
 
 app.get("/dropTables", async (req, res) => {
-    if (await DropTables(pg)) {
+    if (await ExecuteQuery(pg, sqlQueries[2])) {
         res.send("Tables Dropped");
         console.log("Tables Dropped");
     } else {
@@ -150,7 +153,7 @@ app.get("/dropTables", async (req, res) => {
 });
 
 app.get("/dropTablesRR", async (req, res) => {
-    if (await DropTables(pgRR)) {
+    if (await ExecuteQuery(pgRR, sqlQueries[2])) {
         res.send("Tables Dropped");
         console.log("Tables Dropped");
     } else {
@@ -164,6 +167,8 @@ CheckConnection(pg);
 ViewPlayers(pg);
 
 Test(pg);
+
+GetSQLFileNames(sqlQueries);
 
 app.listen(3001, () => {
     console.log("Listening...");

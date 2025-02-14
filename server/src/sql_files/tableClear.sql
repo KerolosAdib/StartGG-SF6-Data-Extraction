@@ -1,3 +1,6 @@
-DELETE FROM Players;
+DELETE FROM Sets;
 DELETE FROM Events;
 DELETE FROM Tournaments;
+DELETE FROM HeadToHeadStats;
+DELETE FROM PlayerStats;
+DELETE FROM Players;

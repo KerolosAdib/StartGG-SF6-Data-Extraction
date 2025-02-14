@@ -10,6 +10,8 @@ const {
     PlayerQueryCreation,
 } = require("./graphQLQueries");
 
+const sqlDir = "./src/sql_files/";
+
 require("dotenv").config();
 
 // const pg = new PG.Pool({
@@ -37,20 +39,6 @@ async function CheckConnection(pg) {
         client.release();
     } catch (err) {
         console.error("Error connecting to PostgreSQL database: ", err);
-    }
-}
-
-async function CreateTables(pg) {
-    try {
-        let table = fs
-            .readFileSync(
-                path.resolve(__dirname, "sql_files/tableCreation.sql")
-            )
-            .toString();
-        let res = await pg.query(table);
-        console.log(res.rows);
-    } catch (err) {
-        console.error(err);
     }
 }
 
@@ -660,7 +648,11 @@ async function RetieveSetInfoWithSetIDs(
                         data[set].slots.forEach((slot) => {
                             if (slot.entrant) {
                                 entrants.push(slot.entrant.id);
-                                console.log(`ID ${j}: ${slot.entrant.id}`);
+                                console.log(
+                                    `ID ${j}: ${
+                                        entrantPlayers[slot.entrant.id]
+                                    }`
+                                );
                                 console.log(
                                     `Player ${j}: ${slot.entrant.name}`
                                 );
@@ -673,8 +665,8 @@ async function RetieveSetInfoWithSetIDs(
 
                     let playerOneID;
                     let playerTwoID;
-                    let playerOneScore;
-                    let playerTwoScore;
+                    let playerOneScore = 0;
+                    let playerTwoScore = 0;
                     let hasDQ = false;
                     let winnerId;
                     if (entrants[0]) {
@@ -718,7 +710,7 @@ async function RetieveSetInfoWithSetIDs(
                             HasDQ = EXCLUDED.HasDQ
                     `;
 
-                    pg.query(insertOrUpdateSet, [
+                    await pg.query(insertOrUpdateSet, [
                         setID,
                         setIDEvents[setID].EventID,
                         playerOneID,
@@ -756,35 +748,28 @@ async function Test(pg) {
     }
 }
 
-async function ClearTables(pg) {
-    const query = fs
-        .readFileSync(path.resolve(__dirname, "sql_files/tableClear.sql"))
-        .toString();
-
+async function ExecuteQuery(pg, fileName) {
     try {
+        const query = fs
+            .readFileSync(path.resolve(__dirname, `sql_files/${fileName}`))
+            .toString();
+
         await pg.query(query);
     } catch (err) {
+        console.error(err);
         return false;
     }
     return true;
 }
 
-async function DropTables(pg) {
-    const query = fs
-        .readFileSync(path.resolve(__dirname, "sql_files/deleteTables.sql"))
-        .toString();
-
-    try {
-        await pg.query(query);
-    } catch (err) {
-        return false;
-    }
-    return true;
+async function GetSQLFileNames(sqlQueries) {
+    fs.readdirSync(sqlDir).forEach((file) => {
+        sqlQueries.push(file);
+    });
 }
 
 module.exports = {
     CheckConnection,
-    CreateTables,
     ViewPlayers,
     FetchTournaments,
     //RetrieveRRTournaments,
@@ -793,6 +778,6 @@ module.exports = {
     RetrievePlayersFromEvents,
     RetieveSetInfoWithSetIDs,
     Test,
-    ClearTables,
-    DropTables,
+    ExecuteQuery,
+    GetSQLFileNames,
 };
