@@ -12,7 +12,9 @@ const {
     RetrieveEventsBasedOnTournaments,
     RetrievePlayersFromEvents,
     RetrieveSetIDsFromEventPhases,
-    RetieveSetInfoWithSetIDs,
+    RetrievePhaseGroupsFromPhases,
+    RetrieveSetIDsFromEventPhaseGroups,
+    RetrieveSetInfoWithSetIDs,
     Test,
     ExecuteQuery,
     GetSQLFileNames,
@@ -50,11 +52,12 @@ app.get("/", async (req, res) => {
 
 app.get("/GetInfo", async (req, res) => {
     await ExecuteQuery(pg, sqlQueries[4]);
-    let tournamentIds = await FetchTournaments();
+    let tournamentIds = await FetchTournaments(pg);
     let eventPhases = {};
     let exceededEntries = {};
     let setIDEvents = {};
     let events = await RetrieveEventsBasedOnTournaments(
+        pg,
         tournamentIds,
         eventPhases
     );
@@ -63,13 +66,18 @@ app.get("/GetInfo", async (req, res) => {
         setIDEvents,
         exceededEntries
     );
-    let players = await RetrievePlayersFromEvents(events);
-    await RetieveSetInfoWithSetIDs(setIDs, players, setIDEvents);
 
-    const jsonMap = JSON.stringify([...players]);
-    fs.writeFileSync("playerMap.json", jsonMap);
+    let phaseGroupEvents = await RetrievePhaseGroupsFromPhases(exceededEntries);
+
+    if (Object.keys(phaseGroupEvents).length != 0) {
+        await RetrieveSetIDsFromEventPhaseGroups(phaseGroupEvents, setIDEvents);
+    }
+
+    let players = await RetrievePlayersFromEvents(pg, events);
+    await RetrieveSetInfoWithSetIDs(pg, players, setIDEvents);
+
     res.writeHead(200, { "Content-Type": "application/json" });
-    res.end(JSON.stringify(tournamentIds));
+    res.end("Done");
 });
 
 app.get("/getRainierRushdownInfo", async (req, res) => {
@@ -84,16 +92,16 @@ app.get("/getRainierRushdownInfo", async (req, res) => {
         eventPhases
     );
     let entrantPlayers = await RetrievePlayersFromEvents(pgRR, eventIDs);
-    let setIDs = await RetrieveSetIDsFromEventPhases(
+    await RetrieveSetIDsFromEventPhases(
         eventPhases,
         setIDEvents,
         exceededEntries
     );
 
-    await RetieveSetInfoWithSetIDs(pgRR, setIDs, entrantPlayers, setIDEvents);
+    await RetrieveSetInfoWithSetIDs(pgRR, entrantPlayers, setIDEvents);
     await ExecuteQuery(pgRR, sqlQueries[1]);
     await ExecuteQuery(pgRR, sqlQueries[0]);
-    res.send(setIDs);
+    res.send(Object.keys(setIDEvents));
 });
 
 app.post("/addUser", (req, res) => {});

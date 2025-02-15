@@ -8,6 +8,8 @@ const {
     SetIDQueryCreation,
     SetQueryCreation,
     PlayerQueryCreation,
+    GetPhaseGroupsFromPhasesQuery,
+    RetrieveSetIDsWithPhaseGroups,
 } = require("./graphQLQueries");
 
 const sqlDir = "./src/sql_files/";
@@ -371,23 +373,27 @@ async function RetrievePlayersFromEvents(pg, events) {
     let numEntrants = 0;
     let highestQueryComplexity = 0;
     let i = 0;
-    const eventIDMap = new Map();
-    while (i < events.length) {
+    let args = {};
+    while (i < events.length || Object.keys(args).length != 0) {
         let start = i;
-        while (eventIDMap.size < 20 && i < events.length) {
-            eventIDMap.set(events[i].EventID, 1);
+        while (Object.keys(args).length < 20 && i < events.length) {
+            args[events[i].EventID] = {
+                page: 1,
+            };
             i++;
         }
 
-        const query = PlayerQueryCreation(eventIDMap.size);
+        const query = PlayerQueryCreation(Object.keys(args).length);
 
         let queryArgs = {};
 
-        let keys = Array.from(eventIDMap.keys());
-        for (let j = 0; j < keys.length; j++) {
-            queryArgs["E" + (j + 1)] = keys[j];
-            queryArgs["P" + (j + 1)] = eventIDMap.get(keys[j]);
+        let j = 1;
+        for (const eventID in args) {
+            queryArgs[`E${j}`] = eventID;
+            queryArgs[`P${j}`] = args[eventID].page;
+            j++;
         }
+
         queryArgs["perPage"] = 15;
 
         let results = await fetch("https://api.start.gg/gql/alpha", {
@@ -460,12 +466,9 @@ async function RetrievePlayersFromEvents(pg, events) {
                         }
                     });
                     if (data[event].entrants.nodes.length != 15) {
-                        eventIDMap.delete(data[event].id);
+                        delete args[data[event].id];
                     } else {
-                        eventIDMap.set(
-                            data[event].id,
-                            eventIDMap.get(data[event].id) + 1
-                        );
+                        args[data[event].id].page += 1;
                     }
                 }
             }
@@ -556,28 +559,32 @@ async function RetrieveSetIDsFromEventPhases(
                         }`
                     );
                     console.log("Current page: " + args[id].page);
-                    data[event].sets.nodes.forEach((set) => {
-                        setIDs.push(set.id);
-                        setIDEvents[set.id] = {
-                            EventID: id,
-                        };
-                    });
 
                     if (data[event].sets.pageInfo.totalPages > 100) {
-                        exceededEntries.push(id);
+                        exceededEntries[
+                            eventPhases[id].PhaseIDs[args[id].PhasePos]
+                        ] = id;
                         delete args[id];
-                    } else if (
-                        args[id].pages < data[event].sets.pageInfo.totalPages
-                    ) {
-                        args[id].page += 1;
-                    } else if (
-                        args[id].PhasePos + 1 <
-                        eventPhases[id].PhaseIDs.length
-                    ) {
-                        args[id].PhasePos += 1;
-                        args[id].page = 1;
                     } else {
-                        delete args[id];
+                        data[event].sets.nodes.forEach((set) => {
+                            setIDs.push(set.id);
+                            setIDEvents[set.id] = id;
+                        });
+
+                        if (
+                            args[id].pages <
+                            data[event].sets.pageInfo.totalPages
+                        ) {
+                            args[id].page += 1;
+                        } else if (
+                            args[id].PhasePos + 1 <
+                            eventPhases[id].PhaseIDs.length
+                        ) {
+                            args[id].PhasePos += 1;
+                            args[id].page = 1;
+                        } else {
+                            delete args[id];
+                        }
                     }
                 }
             }
@@ -592,14 +599,146 @@ async function RetrieveSetIDsFromEventPhases(
     return setIDs;
 }
 
-async function RetieveSetInfoWithSetIDs(
-    pg,
-    setIDs,
-    entrantPlayers,
+async function RetrievePhaseGroupsFromPhases(exceededEntries) {
+    let i = 0;
+    let entryKeys = Object.keys(exceededEntries);
+    let highestQueryComplexity = 0;
+    let phaseGroupEvents = {};
+    while (i < entryKeys.length) {
+        let args = [];
+        while (i < entryKeys.length && Object.keys(args).length < 500) {
+            args.push(entryKeys[i]);
+            i++;
+        }
+
+        let queryArgs = {};
+        for (let j = 0; j < args.length; j++) {
+            queryArgs[`phaseID${j + 1}`] = args[j];
+        }
+
+        let query = GetPhaseGroupsFromPhasesQuery(args.length);
+
+        let results = await fetch("https://api.start.gg/gql/alpha", {
+            method: "POST",
+
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: "Bearer " + process.env.AUTH_TOKEN,
+            },
+
+            body: JSON.stringify({
+                query: query,
+                variables: queryArgs,
+            }),
+        });
+
+        try {
+            results = await results.json();
+
+            console.log(results);
+
+            highestQueryComplexity = Math.max(
+                highestQueryComplexity,
+                results.extensions.queryComplexity
+            );
+
+            let data = results.data;
+
+            for (const phase in data) {
+                if (data[phase]) {
+                    let id = data[phase].id;
+                    data[phase].phaseGroups.nodes.forEach((phaseGroup) => {
+                        phaseGroupEvents[phaseGroup.id] = exceededEntries[id];
+                    });
+                }
+            }
+            console.log("Highest Query Complexity: " + highestQueryComplexity);
+            console.log(i + "/" + entryKeys.length);
+        } catch (err) {
+            console.error(err);
+        }
+        await delay(750);
+    }
+    return phaseGroupEvents;
+}
+
+async function RetrieveSetIDsFromEventPhaseGroups(
+    phaseGroupEvents,
     setIDEvents
 ) {
+    const groupKeys = Object.keys(phaseGroupEvents);
+
+    let i = 0;
+    let args = {};
+    let highestQueryComplexity = 0;
+    while (i < groupKeys.length || Object.keys(args).length != 0) {
+        while (i < groupKeys.length && Object.keys(args).length < 500) {
+            args[groupKeys[i]] = 1;
+            i++;
+        }
+
+        let queryArgs = {};
+        let j = 1;
+        for (const phaseGroupID in args) {
+            queryArgs[`groupID${j}`] = phaseGroupID;
+            queryArgs[`page${j}`] = args[phaseGroupID];
+            j++;
+        }
+
+        queryArgs[`perPage`] = 100;
+
+        const query = RetrieveSetIDsWithPhaseGroups(Object.keys(args).length);
+
+        let results = await fetch("https://api.start.gg/gql/alpha", {
+            method: "POST",
+
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: "Bearer " + process.env.AUTH_TOKEN,
+            },
+
+            body: JSON.stringify({
+                query: query,
+                variables: queryArgs,
+            }),
+        });
+
+        try {
+            results = await results.json();
+
+            console.log(results);
+
+            highestQueryComplexity = Math.max(
+                highestQueryComplexity,
+                results.extensions.queryComplexity
+            );
+
+            let data = results.data;
+
+            for (const phaseGroup in data) {
+                if (data[phaseGroup]) {
+                    let id = data[phaseGroup].id;
+                    data[phaseGroup].sets.nodes.forEach((set) => {
+                        setIDEvents[set.id] = phaseGroupEvents[id];
+                    });
+
+                    if (data[phaseGroup].sets.nodes.length == 100) {
+                        args[id] += 1;
+                    } else {
+                        delete args[id];
+                    }
+                }
+            }
+        } catch (err) {
+            console.error(err);
+        }
+    }
+}
+
+async function RetrieveSetInfoWithSetIDs(pg, entrantPlayers, setIDEvents) {
     let i = 0;
     let highestQueryComplexity = 0;
+    const setIDs = Object.keys(setIDEvents);
     while (i < setIDs.length) {
         let setIDArgs = [];
         while (i < setIDs.length && setIDArgs.length < 150) {
@@ -631,7 +770,9 @@ async function RetieveSetInfoWithSetIDs(
             results = await results.json();
 
             console.log(results);
-
+            for (let j = 0; j < setIDArgs.length; j++) {
+                console.log(`S${j + 1}: ${setIDArgs[j]}`);
+            }
             highestQueryComplexity = Math.max(
                 highestQueryComplexity,
                 results.extensions.queryComplexity
@@ -643,7 +784,7 @@ async function RetieveSetInfoWithSetIDs(
                 let j = 1;
                 let entrants = [];
                 let setID = data[set].id;
-                if (typeof setID != "string") {
+                if (typeof setID != "string" && data[set].winnerId) {
                     if (data[set].slots) {
                         data[set].slots.forEach((slot) => {
                             if (slot.entrant) {
@@ -712,7 +853,7 @@ async function RetieveSetInfoWithSetIDs(
 
                     await pg.query(insertOrUpdateSet, [
                         setID,
-                        setIDEvents[setID].EventID,
+                        setIDEvents[setID],
                         playerOneID,
                         playerTwoID,
                         playerOneScore,
@@ -776,7 +917,9 @@ module.exports = {
     RetrieveEventsBasedOnTournaments,
     RetrieveSetIDsFromEventPhases,
     RetrievePlayersFromEvents,
-    RetieveSetInfoWithSetIDs,
+    RetrievePhaseGroupsFromPhases,
+    RetrieveSetIDsFromEventPhaseGroups,
+    RetrieveSetInfoWithSetIDs,
     Test,
     ExecuteQuery,
     GetSQLFileNames,

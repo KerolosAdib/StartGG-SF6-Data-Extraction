@@ -145,10 +145,63 @@ function PlayerQueryCreation(numEvents) {
     return query;
 }
 
+function GetPhaseGroupsFromPhasesQuery(numPhases) {
+    let query = `query (`;
+    for (let i = 0; i < numPhases; i++) {
+        query += `$phaseID${i + 1}: ID! `;
+    }
+
+    query += `) {`;
+
+    for (let i = 0; i < numPhases; i++) {
+        query += `
+            Phase${i + 1}: phase(id: $phaseID${i + 1}) {
+                id
+                phaseGroups(query: {
+                    perPage: 500
+                }) {
+                    nodes {
+                        id
+                    }
+                }
+            }
+        `;
+    }
+
+    query += `}`;
+    return query;
+}
+
+function RetrieveSetIDsWithPhaseGroups(numPhaseGroups) {
+    let query = `query (`;
+    for (let i = 0; i < numPhaseGroups; i++) {
+        query += `$groupID${i + 1}: ID! $page${i + 1}: Int! `;
+    }
+
+    query += `$perPage: Int!) {`;
+
+    for (let i = 0; i < numPhaseGroups; i++) {
+        query += `
+            PG${i + 1}: phaseGroup(id: $groupID${i + 1}) {
+                id
+                sets(page: $page${i + 1} perPage: $perPage) {
+                    nodes {
+                        id
+                    }
+                }
+            }
+        `;
+    }
+    query += `}`;
+    return query;
+}
+
 module.exports = {
     GET_TOURNAMENTS,
     GET_EVENTS,
     SetIDQueryCreation,
     SetQueryCreation,
     PlayerQueryCreation,
+    GetPhaseGroupsFromPhasesQuery,
+    RetrieveSetIDsWithPhaseGroups,
 };

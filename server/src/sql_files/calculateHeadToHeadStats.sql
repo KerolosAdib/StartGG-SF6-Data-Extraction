@@ -13,7 +13,7 @@ WHERE s.HasDQ = FALSE
 GROUP BY LEAST(s.PlayerOneID, s.PlayerTwoID), GREATEST(s.PlayerOneID, s.PlayerTwoID)
 ON CONFLICT (PlayerOneID, PlayerTwoID)
 DO UPDATE SET 
-    PlayerOneSetWins = Stats.PlayerOneSetWins + EXCLUDED.PlayerOneSetWins,
-    PlayerTwoSetWins = Stats.PlayerTwoSetWins + EXCLUDED.PlayerTwoSetWins,
-    PlayerOneGameWins = Stats.PlayerOneGameWins + EXCLUDED.PlayerOneGameWins,
-    PlayerTwoGameWins = Stats.PlayerTwoGameWins + EXCLUDED.PlayerTwoGameWins;
+    PlayerOneSetWins = HeadToHeadStats.PlayerOneSetWins + EXCLUDED.PlayerOneSetWins,
+    PlayerTwoSetWins = HeadToHeadStats.PlayerTwoSetWins + EXCLUDED.PlayerTwoSetWins,
+    PlayerOneGameWins = HeadToHeadStats.PlayerOneGameWins + EXCLUDED.PlayerOneGameWins,
+    PlayerTwoGameWins = HeadToHeadStats.PlayerTwoGameWins + EXCLUDED.PlayerTwoGameWins;
