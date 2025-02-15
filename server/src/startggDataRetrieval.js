@@ -32,7 +32,16 @@ require("dotenv").config();
 //     port: process.env.PGPORT,
 // });
 
-const delay = (time) => new Promise((resolve) => setTimeout(resolve, time));
+function waitUntil(targetTime) {
+    const now = new Date();
+    const remainingTime = targetTime.getTime() - now.getTime();
+
+    if (remainingTime > 0) {
+        return new Promise((resolve) => setTimeout(resolve, remainingTime));
+    } else {
+        return Promise.resolve();
+    }
+}
 
 async function CheckConnection(pg) {
     try {
@@ -72,6 +81,7 @@ async function FetchTournaments(pg, name) {
         let page = 1;
         let lastCall = 0;
         while (page <= 20 && hasMore) {
+            lastCall = Date.now();
             let results = await fetch("https://api.start.gg/gql/alpha", {
                 method: "POST",
 
@@ -151,7 +161,7 @@ async function FetchTournaments(pg, name) {
                 );
             }
             page++;
-            await delay(1000);
+            await waitUntil(new Date(lastCall + 750));
         }
         i++;
     }
@@ -268,6 +278,7 @@ async function RetrieveEventsBasedOnTournaments(
     let totalEvents = 0;
     let i = 0;
     let groupSize = 350;
+    let lastCall = new Date(1000);
     const groupedIds = [];
     for (let i = 0; i < tournamentIds.length; i += groupSize) {
         groupedIds.push(tournamentIds.slice(i, i + groupSize));
@@ -289,6 +300,7 @@ async function RetrieveEventsBasedOnTournaments(
             return map;
         }, {});
 
+        lastCall = Date.now();
         let results = await fetch("https://api.start.gg/gql/alpha", {
             method: "POST",
 
@@ -364,7 +376,7 @@ async function RetrieveEventsBasedOnTournaments(
             });
         });
         i++;
-        await delay(750);
+        await waitUntil(new Date(lastCall + 750));
     }
     return outdatedEvents;
 }
@@ -375,6 +387,7 @@ async function RetrievePlayersFromEvents(pg, events) {
     let highestQueryComplexity = 0;
     let i = 0;
     let args = {};
+    let lastCall = new Date(1000);
     while (i < events.length || Object.keys(args).length != 0) {
         let start = i;
         while (Object.keys(args).length < 20 && i < events.length) {
@@ -397,6 +410,7 @@ async function RetrievePlayersFromEvents(pg, events) {
 
         queryArgs["perPage"] = 15;
 
+        lastCall = Date.now();
         let results = await fetch("https://api.start.gg/gql/alpha", {
             method: "POST",
 
@@ -476,7 +490,7 @@ async function RetrievePlayersFromEvents(pg, events) {
             console.log(err);
             hasMore = true;
         }
-        await delay(750);
+        await waitUntil(new Date(lastCall + 750));
     }
     console.log("Entrants: " + numEntrants);
     console.log("Highest Query Complexity: " + highestQueryComplexity);
@@ -493,6 +507,7 @@ async function RetrieveSetIDsFromEventPhases(
     let setIDs = [];
     let highestQueryComplexity = 0;
     const eventKeys = Object.keys(eventPhases);
+    let lastCall = new Date(1000);
     while (i < eventKeys.length || Object.keys(args).length != 0) {
         while (Object.keys(args).length < 500 && i < eventKeys.length) {
             if (eventPhases[eventKeys[i]].PhaseIDs.length != 0) {
@@ -517,6 +532,8 @@ async function RetrieveSetIDsFromEventPhases(
         queryArgs[`perPage`] = 100;
 
         let query = SetIDQueryCreation(Object.keys(args).length);
+
+        lastCall = Date.now();
 
         let results = await fetch("https://api.start.gg/gql/alpha", {
             method: "POST",
@@ -593,7 +610,7 @@ async function RetrieveSetIDsFromEventPhases(
         } catch (err) {
             console.error(err);
         }
-        await delay(750);
+        await waitUntil(new Date(lastCall + 750));
     }
     return setIDs;
 }
@@ -603,6 +620,7 @@ async function RetrievePhaseGroupsFromPhases(exceededEntries) {
     let entryKeys = Object.keys(exceededEntries);
     let highestQueryComplexity = 0;
     let phaseGroupEvents = {};
+    let lastCall = new Date(1000);
     while (i < entryKeys.length) {
         let args = [];
         while (i < entryKeys.length && Object.keys(args).length < 500) {
@@ -616,6 +634,8 @@ async function RetrievePhaseGroupsFromPhases(exceededEntries) {
         }
 
         let query = GetPhaseGroupsFromPhasesQuery(args.length);
+
+        lastCall = Date.now();
 
         let results = await fetch("https://api.start.gg/gql/alpha", {
             method: "POST",
@@ -656,7 +676,7 @@ async function RetrievePhaseGroupsFromPhases(exceededEntries) {
         } catch (err) {
             console.error(err);
         }
-        await delay(750);
+        await waitUntil(new Date(lastCall + 750));
     }
     return phaseGroupEvents;
 }
@@ -670,6 +690,7 @@ async function RetrieveSetIDsFromEventPhaseGroups(
     let i = 0;
     let args = {};
     let highestQueryComplexity = 0;
+    let lastCall = new Date(1000);
     while (i < groupKeys.length || Object.keys(args).length != 0) {
         while (i < groupKeys.length && Object.keys(args).length < 500) {
             args[groupKeys[i]] = 1;
@@ -688,6 +709,7 @@ async function RetrieveSetIDsFromEventPhaseGroups(
 
         const query = RetrieveSetIDsWithPhaseGroups(Object.keys(args).length);
 
+        lastCall = Date.now();
         let results = await fetch("https://api.start.gg/gql/alpha", {
             method: "POST",
 
@@ -731,12 +753,14 @@ async function RetrieveSetIDsFromEventPhaseGroups(
         } catch (err) {
             console.error(err);
         }
+        await waitUntil(new Date(lastCall + 750));
     }
 }
 
 async function RetrieveSetInfoWithSetIDs(pg, entrantPlayers, setIDEvents) {
     let i = 0;
     let highestQueryComplexity = 0;
+    let lastCall = new Date.now();
     const setIDs = Object.keys(setIDEvents);
     while (i < setIDs.length) {
         let setIDArgs = [];
@@ -751,6 +775,8 @@ async function RetrieveSetInfoWithSetIDs(pg, entrantPlayers, setIDEvents) {
         for (let j = 0; j < setIDArgs.length; j++) {
             queryArgs["setID" + (j + 1)] = setIDArgs[j];
         }
+
+        lastCall = Date.now();
 
         let results = await fetch("https://api.start.gg/gql/alpha", {
             method: "POST",
@@ -869,7 +895,7 @@ async function RetrieveSetInfoWithSetIDs(pg, entrantPlayers, setIDEvents) {
         } catch (err) {
             console.error(err);
         }
-        await delay(750);
+        await waitUntil(new Date(lastCall + 750));
     }
 }
 
