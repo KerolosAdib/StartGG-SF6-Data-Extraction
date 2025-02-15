@@ -1,8 +1,6 @@
 CREATE TABLE IF NOT EXISTS Players(
     PlayerID INT PRIMARY KEY NOT NULL,
     GamerTag VARCHAR(255) NOT NULL,
-    TotalWins INT CHECK (TotalWins >= 0),
-    TotalLosses INT CHECK (TotalLosses >= 0),
     Slug VARCHAR(255)
 );
 

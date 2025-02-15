@@ -70,6 +70,7 @@ async function FetchTournaments(pg, name) {
 
     while (hasMore) {
         let page = 1;
+        let lastCall = 0;
         while (page <= 20 && hasMore) {
             let results = await fetch("https://api.start.gg/gql/alpha", {
                 method: "POST",
@@ -442,8 +443,8 @@ async function RetrievePlayersFromEvents(pg, events) {
                             }
 
                             const insertOrUpdatePlayer = `
-                                    INSERT INTO Players(PlayerID, GamerTag, TotalWins, TotalLosses, Slug)
-                                    VALUES($1, $2, $3, $4, $5)
+                                    INSERT INTO Players(PlayerID, GamerTag, Slug)
+                                    VALUES($1, $2, $3)
                                     ON CONFLICT(PlayerID)
                                     DO UPDATE
                                     SET GamerTag = EXCLUDED.GamerTag,
@@ -453,8 +454,6 @@ async function RetrievePlayersFromEvents(pg, events) {
                             pg.query(insertOrUpdatePlayer, [
                                 playerID,
                                 playerGamerTag,
-                                0,
-                                0,
                                 playerSlug,
                             ]);
 
