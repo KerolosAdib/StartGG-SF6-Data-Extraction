@@ -56,6 +56,35 @@ const GET_EVENTS = `
     }
 `;
 
+function EventsQueryCreation(numTournaments) {
+    let query = `query (`;
+    for (let i = 0; i < numTournaments; i++) {
+        query += `$T${i + 1}: ID! `;
+    }
+
+    query += `$SF6: ID!) {`;
+
+    for (let i = 0; i < numTournaments; i++) {
+        query += `
+            T${i + 1}: tournament(id: $T${i + 1}) {
+                id
+                events(filter: {
+                    videogameId: [$SF6]
+                    published: true
+                    type: 1
+                }) {
+                    id
+                    name
+                    slug
+                    updatedAt
+                }
+            }
+        `;
+    }
+    query += `}`;
+    return query;
+}
+
 function SetIDQueryCreation(numEvents) {
     let query = `query (`;
     for (let i = 0; i < numEvents; i++) {
@@ -199,6 +228,7 @@ function RetrieveSetIDsWithPhaseGroups(numPhaseGroups) {
 module.exports = {
     GET_TOURNAMENTS,
     GET_EVENTS,
+    EventsQueryCreation,
     SetIDQueryCreation,
     SetQueryCreation,
     PlayerQueryCreation,

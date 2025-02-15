@@ -5,6 +5,7 @@ const fs = require("fs");
 const {
     GET_TOURNAMENTS,
     GET_EVENTS,
+    EventsQueryCreation,
     SetIDQueryCreation,
     SetQueryCreation,
     PlayerQueryCreation,
@@ -277,30 +278,45 @@ async function RetrieveEventsBasedOnTournaments(
     let outdatedEvents = [];
     let totalEvents = 0;
     let i = 0;
-    let groupSize = 350;
     let lastCall = new Date(1000);
     const groupedIds = [];
-    for (let i = 0; i < tournamentIds.length; i += groupSize) {
-        groupedIds.push(tournamentIds.slice(i, i + groupSize));
-    }
-
-    while (i < groupedIds.length) {
-        const getEventsQuery = "SELECT * FROM Events WHERE TournamentID = $1";
+    let args = [];
+    let highestQueryComplexity = 0;
+    const getEventsQuery = "SELECT * FROM Events WHERE TournamentID = $1";
+    while (i < tournamentIds.length || args.length != 0) {
+        let queryArgs = {};
         const existingEvents = [];
-        let j = 0;
-        while (j < groupedIds[i].length) {
-            let res = await pg.query(getEventsQuery, [groupedIds[i][j]]);
-            if (res.rows) existingEvents.push(res.rows);
-            j++;
+
+        while (i < tournamentIds.length && args.length < 350) {
+            args.push(tournamentIds[i]);
+            i++;
         }
 
-        const eventsMap = existingEvents.reduce((map, obj) => {
-            const { eventid, latestupdate, eventname, slug } = obj;
-            map[eventid] = { latestupdate, eventname, slug };
-            return map;
-        }, {});
+        for (let j = 0; j < args.length; j++) {
+            queryArgs[`T${j + 1}`] = args[j];
+            let res = await pg.query(getEventsQuery, [args[j]]);
+            if (res.rows.length != 0) existingEvents.push(res.rows);
+        }
 
-        lastCall = Date.now();
+        const eventsMap = {};
+        for (let j = 0; j < existingEvents.length; j++) {
+            eventsMap[existingEvents[j].eventid] = {
+                LatestUpdate: existingEvents[j].latestupdate,
+                EventName: existingEvents[j].eventname,
+                Slug: existingEvents[j].slug,
+            };
+        }
+
+        // const eventsMap = existingEvents.reduce((map, obj) => {
+        //     const { eventid, latestupdate, eventname, slug } = obj;
+        //     map[eventid] = { latestupdate, eventname, slug };
+        //     return map;
+        // }, {});
+
+        queryArgs[`SF6`] = 43868;
+
+        const query = EventsQueryCreation(args.length);
+
         let results = await fetch("https://api.start.gg/gql/alpha", {
             method: "POST",
 
@@ -310,74 +326,187 @@ async function RetrieveEventsBasedOnTournaments(
             },
 
             body: JSON.stringify({
-                query: GET_EVENTS,
-                variables: {
-                    perPage: 350,
-                    tournamentIDs: groupedIds[i],
-                    SF6: 43868,
-                },
+                query: query,
+                variables: queryArgs,
             }),
         });
 
-        results = await results.json();
-        console.log(results);
-        results.data.tournaments.nodes.forEach((tournament) => {
-            let id = tournament.id;
-            tournament.events.forEach((event) => {
-                if (
-                    !eventsMap[event.id] ||
-                    (eventsMap[event.id] &&
-                        eventsMap[event.id].latestupdate / 1000 <
-                            event.updatedAt)
-                ) {
-                    console.log(`EventID: ${event.id}`);
-                    console.log(`updatedAt: ${event.updatedAt}`);
-                    console.log(`EventName: ${event.name}`);
-                    console.log(`Slug: ${event.slug}`);
-                    console.log(`Total Events: ${totalEvents}`);
-                    totalEvents++;
-                    const insertOrUpdateEvent = `
-                        INSERT INTO Events(TournamentID, EventID, LatestUpdate, EventName, Slug)
-                        VALUES($1, $2, TO_TIMESTAMP($3), $4, $5)
-                        ON CONFLICT(EventID)
-                        DO UPDATE
-                        SET LatestUpdate = EXCLUDED.LatestUpdate,
-                            EventName = EXCLUDED.EventName,
-                            Slug = EXCLUDED.Slug
-                        WHERE Events.LatestUpdate != EXCLUDED.LatestUpdate
-                    `;
+        try {
+            results = await results.json();
+            console.log(results);
 
-                    pg.query(insertOrUpdateEvent, [
-                        id,
-                        event.id,
-                        event.updatedAt,
-                        event.name,
-                        event.slug,
-                    ]);
-                    //tournamentIds.get(id).set(event.id, new Map());
-                    outdatedEvents.push({
-                        EventID: event.id,
-                        TournamentID: id,
+            highestQueryComplexity = Math.max(
+                highestQueryComplexity,
+                results.extensions.queryComplexity
+            );
+
+            const data = results.data;
+            for (const key in data) {
+                const tournament = data[key];
+                if (tournament) {
+                    const id = tournament.id;
+                    tournament.events.forEach((event) => {
+                        const eventID = event.id;
+                        if (
+                            !eventsMap[eventID] ||
+                            (eventsMap[eventID] &&
+                                eventsMap[eventID].LatestUpdate / 1000 <
+                                    event.updatedAt)
+                        ) {
+                            console.log(`EventID: ${event.id}`);
+                            console.log(`updatedAt: ${event.updatedAt}`);
+                            console.log(`EventName: ${event.name}`);
+                            console.log(`Slug: ${event.slug}`);
+                            console.log(`Total Events: ${totalEvents}`);
+                            totalEvents++;
+                            const insertOrUpdateEvent = `
+                                INSERT INTO Events(TournamentID, EventID, LatestUpdate, EventName, Slug)
+                                VALUES($1, $2, TO_TIMESTAMP($3), $4, $5)
+                                ON CONFLICT(EventID)
+                                DO UPDATE
+                                SET LatestUpdate = EXCLUDED.LatestUpdate,
+                                    EventName = EXCLUDED.EventName,
+                                    Slug = EXCLUDED.Slug
+                                WHERE Events.LatestUpdate != EXCLUDED.LatestUpdate
+                            `;
+
+                            pg.query(insertOrUpdateEvent, [
+                                id,
+                                event.id,
+                                event.updatedAt,
+                                event.name,
+                                event.slug,
+                            ]);
+                            //tournamentIds.get(id).set(event.id, new Map());
+                            outdatedEvents.push({
+                                EventID: event.id,
+                                TournamentID: id,
+                            });
+
+                            // let phaseIDs = [];
+                            // if (event.phases) {
+                            //     event.phases.forEach((phase) => {
+                            //         phaseIDs.push(phase.id);
+                            //     });
+                            // }
+
+                            // eventPhases[event.id] = {
+                            //     PhaseIDs: phaseIDs,
+                            // };
+
+                            // console.log(phaseIDs);
+                        }
+                        args.splice(args.indexOf(id), 1);
                     });
-
-                    let phaseIDs = [];
-                    if (event.phases) {
-                        event.phases.forEach((phase) => {
-                            phaseIDs.push(phase.id);
-                        });
-                    }
-
-                    eventPhases[event.id] = {
-                        PhaseIDs: phaseIDs,
-                    };
-
-                    console.log(phaseIDs);
                 }
-            });
-        });
-        i++;
+                console.log(
+                    "Highest Query Complexity: " + highestQueryComplexity
+                );
+            }
+        } catch (err) {
+            console.error(err);
+        }
         await waitUntil(new Date(lastCall + 750));
     }
+
+    // for (let i = 0; i < tournamentIds.length; i += groupSize) {
+    //     groupedIds.push(tournamentIds.slice(i, i + groupSize));
+    // }
+
+    // while (i < groupedIds.length) {
+    //     const getEventsQuery = "SELECT * FROM Events WHERE TournamentID = $1";
+    //     const existingEvents = [];
+    //     let j = 0;
+    //     while (j < groupedIds[i].length) {
+    //         let res = await pg.query(getEventsQuery, [groupedIds[i][j]]);
+    //         if (res.rows) existingEvents.push(res.rows);
+    //         j++;
+    //     }
+
+    //     const eventsMap = existingEvents.reduce((map, obj) => {
+    //         const { eventid, latestupdate, eventname, slug } = obj;
+    //         map[eventid] = { latestupdate, eventname, slug };
+    //         return map;
+    //     }, {});
+
+    //     lastCall = Date.now();
+    //     let results = await fetch("https://api.start.gg/gql/alpha", {
+    //         method: "POST",
+
+    //         headers: {
+    //             "Content-Type": "application/json",
+    //             Authorization: "Bearer " + process.env.AUTH_TOKEN,
+    //         },
+
+    //         body: JSON.stringify({
+    //             query: GET_EVENTS,
+    //             variables: {
+    //                 perPage: 350,
+    //                 tournamentIDs: groupedIds[i],
+    //                 SF6: 43868,
+    //             },
+    //         }),
+    //     });
+
+    //     results = await results.json();
+    //     console.log(results);
+    //     results.data.tournaments.nodes.forEach((tournament) => {
+    //         let id = tournament.id;
+    //         tournament.events.forEach((event) => {
+    //             if (
+    //                 !eventsMap[event.id] ||
+    //                 (eventsMap[event.id] &&
+    //                     eventsMap[event.id].latestupdate / 1000 <
+    //                         event.updatedAt)
+    //             ) {
+    //                 console.log(`EventID: ${event.id}`);
+    //                 console.log(`updatedAt: ${event.updatedAt}`);
+    //                 console.log(`EventName: ${event.name}`);
+    //                 console.log(`Slug: ${event.slug}`);
+    //                 console.log(`Total Events: ${totalEvents}`);
+    //                 totalEvents++;
+    //                 const insertOrUpdateEvent = `
+    //                     INSERT INTO Events(TournamentID, EventID, LatestUpdate, EventName, Slug)
+    //                     VALUES($1, $2, TO_TIMESTAMP($3), $4, $5)
+    //                     ON CONFLICT(EventID)
+    //                     DO UPDATE
+    //                     SET LatestUpdate = EXCLUDED.LatestUpdate,
+    //                         EventName = EXCLUDED.EventName,
+    //                         Slug = EXCLUDED.Slug
+    //                     WHERE Events.LatestUpdate != EXCLUDED.LatestUpdate
+    //                 `;
+
+    //                 pg.query(insertOrUpdateEvent, [
+    //                     id,
+    //                     event.id,
+    //                     event.updatedAt,
+    //                     event.name,
+    //                     event.slug,
+    //                 ]);
+    //                 //tournamentIds.get(id).set(event.id, new Map());
+    //                 outdatedEvents.push({
+    //                     EventID: event.id,
+    //                     TournamentID: id,
+    //                 });
+
+    //                 let phaseIDs = [];
+    //                 if (event.phases) {
+    //                     event.phases.forEach((phase) => {
+    //                         phaseIDs.push(phase.id);
+    //                     });
+    //                 }
+
+    //                 eventPhases[event.id] = {
+    //                     PhaseIDs: phaseIDs,
+    //                 };
+
+    //                 console.log(phaseIDs);
+    //             }
+    //         });
+    //     });
+    //     i++;
+    //     await waitUntil(new Date(lastCall + 750));
+    // }
     return outdatedEvents;
 }
 

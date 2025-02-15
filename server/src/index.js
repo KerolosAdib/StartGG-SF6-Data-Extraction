@@ -56,11 +56,13 @@ app.get("/GetInfo", async (req, res) => {
     let eventPhases = {};
     let exceededEntries = {};
     let setIDEvents = {};
+    console.time("events");
     let events = await RetrieveEventsBasedOnTournaments(
         pg,
         tournamentIds,
         eventPhases
     );
+    console.timeEnd("events");
     let setIDs = await RetrieveSetIDsFromEventPhases(
         eventPhases,
         setIDEvents,
