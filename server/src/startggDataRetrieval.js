@@ -105,14 +105,14 @@ async function FetchTournaments(pg, name) {
                                 tournament.updatedAt)
                     ) {
                         let log = `
-                    {
-                        CurrentEntry: ${totalIds}
-                        id: ${tournament.id},
-                        Name: ${tournament.name},
-                        Slug: ${tournament.slug},
-                        startAt: ${tournament.startAt},
-                    }
-                    `;
+                            {
+                                CurrentEntry: ${totalIds}
+                                id: ${tournament.id},
+                                Name: ${tournament.name},
+                                Slug: ${tournament.slug},
+                                startAt: ${tournament.startAt},
+                            }
+                        `;
 
                         // fs.appendFile("log.txt", log, (err) => {
                         //     if (err) throw err;

@@ -9,7 +9,7 @@ SELECT
     SUM(CASE WHEN s.PlayerOneID < s.PlayerTwoID THEN s.PlayerOneWins ELSE s.PlayerTwoWins END) AS PlayerOneGameWins,
     SUM(CASE WHEN s.PlayerOneID > s.PlayerTwoID THEN s.PlayerOneWins ELSE s.PlayerTwoWins END) AS PlayerTwoGameWins
 FROM Sets s
-WHERE s.HasDQ = FALSE
+WHERE s.HasDQ = FALSE AND s.PlayerOneID <> s.PlayerTwoID
 GROUP BY LEAST(s.PlayerOneID, s.PlayerTwoID), GREATEST(s.PlayerOneID, s.PlayerTwoID)
 ON CONFLICT (PlayerOneID, PlayerTwoID)
 DO UPDATE SET 
