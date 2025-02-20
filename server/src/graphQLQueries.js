@@ -26,36 +26,6 @@ const GET_TOURNAMENTS = `
     }
 `;
 
-const GET_EVENTS = `
-    query ($perPage: Int! $tournamentIDs: [ID]! $SF6: ID!) {
-        tournaments(
-            query: {
-                filter: {
-                    ids: $tournamentIDs
-                }  
-                perPage: $perPage
-            }
-        ) {
-            nodes {
-                id
-                events(filter: {
-                    videogameId: [$SF6]
-                    published: true
-                    type: 1
-                }) {
-                    id
-                    name
-                    slug
-                    updatedAt
-                    phases {
-                        id
-                    }
-                }
-            }
-        }
-    }
-`;
-
 function EventsQueryCreation(numTournaments) {
     let query = `query (`;
     for (let i = 0; i < numTournaments; i++) {
@@ -85,22 +55,40 @@ function EventsQueryCreation(numTournaments) {
     return query;
 }
 
+function PhaseQueryCreation(numEvents) {
+    let query = `query (`;
+    for (let i = 0; i < numEvents; i++) {
+        query += `$E${i + 1}: ID! `;
+    }
+
+    query += `) {`;
+
+    for (let i = 0; i < numEvents; i++) {
+        query += `
+            E${i + 1}: event(id: $E${i + 1}) {
+                id
+                phases {
+                    id
+                }
+            }
+        `;
+    }
+    query += `}`;
+    return query;
+}
+
 function SetIDQueryCreation(numEvents) {
     let query = `query (`;
     for (let i = 0; i < numEvents; i++) {
-        query += `$eventID${i + 1}: ID! $phaseID${i + 1}: ID! $page${
-            i + 1
-        }: Int! `;
+        query += `$phaseID${i + 1}: ID! $page${i + 1}: Int! `;
     }
 
     query += `$perPage: Int!) {`;
 
     for (let i = 0; i < numEvents; i++) {
-        query += `E${i + 1}: event(id: $eventID${i + 1}) {
+        query += `P${i + 1}: phase(id: $phaseID${i + 1}) {
             id
-            sets(page: $page${i + 1} perPage: $perPage filters: {
-                phaseIds: [$phaseID${i + 1}]
-            }) {
+            sets(page: $page${i + 1} perPage: $perPage) {
                 pageInfo {
                     totalPages
                 }
@@ -125,13 +113,13 @@ function SetQueryCreation(numSets) {
     for (let i = 0; i < numSets; i++) {
         query += `S${i + 1}: set(id: $setID${i + 1}) {
             id
-            slots {
+            slots(includeByes: true) {
                 entrant {
                     id
                     name
                 }
             }
-            displayScore
+            displayScore(mainEntrantId: -1)
             winnerId
         }`;
     }
@@ -139,7 +127,7 @@ function SetQueryCreation(numSets) {
     return query;
 }
 
-function PlayerQueryCreation(numEvents) {
+function EntrantQueryCreation(numEvents) {
     let query = `query (`;
     for (let i = 0; i < numEvents; i++) {
         query += `$E${i + 1}: ID! $P${i + 1}: Int! `;
@@ -150,27 +138,62 @@ function PlayerQueryCreation(numEvents) {
         query += `
             E${i + 1}: event(id: $E${i + 1}) {
                 id
+                numEntrants
                 entrants(query: {
                     perPage: $perPage
                     page: $P${i + 1}
                 }) {
-                    nodes {
-                        id
-                        participants {
-                            player {
-                                id
-                                gamerTag
-                                user {
-                                    slug
-                                }
-                            }
-                        }
-                    }
+                    ...EntrantInfo
                 }
             }
         `;
     }
     query += `}`;
+
+    query += `
+        fragment EntrantInfo on EntrantConnection {
+            pageInfo {
+                totalPages
+            }
+            nodes {
+                id
+            }
+        }
+    `;
+
+    return query;
+}
+
+function PlayerQueryCreation(numEntrants) {
+    let query = `query (`;
+    for (let i = 0; i < numEntrants; i++) {
+        query += `$E${i + 1}: ID! `;
+    }
+
+    query += `) {`;
+    for (let i = 0; i < numEntrants; i++) {
+        query += `
+            E${i + 1}: entrant(id: $E${i + 1}) {
+                id
+                participants {
+                    ...ParticipantInfo
+                }
+            }
+        `;
+    }
+    query += `}`;
+
+    query += `
+        fragment ParticipantInfo on Participant {
+            player {
+                id
+                gamerTag
+                user {
+                    slug
+                }
+            }
+        }
+    `;
     return query;
 }
 
@@ -229,8 +252,10 @@ module.exports = {
     GET_TOURNAMENTS,
     GET_EVENTS,
     EventsQueryCreation,
+    PhaseQueryCreation,
     SetIDQueryCreation,
     SetQueryCreation,
+    EntrantQueryCreation,
     PlayerQueryCreation,
     GetPhaseGroupsFromPhasesQuery,
     RetrieveSetIDsWithPhaseGroups,

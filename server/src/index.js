@@ -1,16 +1,17 @@
-const express = require("express");
-const cors = require("cors");
-const PG = require("pg");
-const fs = require("fs");
-const path = require("path");
+const express = require('express');
+const cors = require('cors');
+const PG = require('pg');
+const fs = require('fs');
+const path = require('path');
 
 const {
     CheckConnection,
     ViewPlayers,
     FetchTournaments,
-    //RetrieveRRTournaments,
     RetrieveEventsBasedOnTournaments,
-    RetrievePlayersFromEvents,
+    RetrievePhasesBasedEvents,
+    RetrieveEntrantsFromEvents,
+    RetrievePlayerInfoFromEntrants,
     RetrieveSetIDsFromEventPhases,
     RetrievePhaseGroupsFromPhases,
     RetrieveSetIDsFromEventPhaseGroups,
@@ -18,9 +19,9 @@ const {
     Test,
     ExecuteQuery,
     GetSQLFileNames,
-} = require("./startggDataRetrieval");
+} = require('./startggDataRetrieval');
 
-require("dotenv").config();
+require('dotenv').config();
 
 const sqlQueries = [];
 
@@ -44,26 +45,22 @@ const pgRR = new PG.Pool({
 
 app.use(cors());
 
-app.get("/", async (req, res) => {
-    const scoreRegex = /^(.*)\s(\d+|W|L)\s-\s(.*)\s(\d+|W|L)$/i;
-    const example = "name 3 - other 2 3 -     0";
-    const match = example.match(scoreRegex);
-});
-
-app.get("/GetInfo", async (req, res) => {
+app.get('/GetInfo', async (req, res) => {
     await ExecuteQuery(pg, sqlQueries[4]);
     let tournamentIds = await FetchTournaments(pg);
     let eventPhases = {};
     let exceededEntries = {};
     let setIDEvents = {};
-    //console.time("events");
-    let events = await RetrieveEventsBasedOnTournaments(
+    console.time('events');
+    let eventTournaments = await RetrieveEventsBasedOnTournaments(
         pg,
-        tournamentIds,
-        eventPhases
+        tournamentIds
     );
-    //console.timeEnd("events");
-    let setIDs = await RetrieveSetIDsFromEventPhases(
+    console.timeEnd('events');
+    const entrants = await RetrieveEntrantsFromEvents(eventTournaments);
+    const players = await RetrievePlayerInfoFromEntrants(pg, entrants);
+    await RetrievePhasesBasedEvents(eventTournaments, eventPhases);
+    await RetrieveSetIDsFromEventPhases(
         eventPhases,
         setIDEvents,
         exceededEntries
@@ -75,100 +72,89 @@ app.get("/GetInfo", async (req, res) => {
         await RetrieveSetIDsFromEventPhaseGroups(phaseGroupEvents, setIDEvents);
     }
 
-    let players = await RetrievePlayersFromEvents(pg, events);
     await RetrieveSetInfoWithSetIDs(pg, players, setIDEvents);
 
-    res.writeHead(200, { "Content-Type": "application/json" });
-    res.end("Done");
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end('Done');
 });
 
-app.get("/getRainierRushdownInfo", async (req, res) => {
+app.get('/organizeData', async (req, res) => {
+    await ExecuteQuery(pg, sqlQueries[1]);
+    await ExecuteQuery(pg, sqlQueries[0]);
+    res.send('Done');
+});
+
+app.get('/getRainierRushdownInfo', async (req, res) => {
     await ExecuteQuery(pgRR, sqlQueries[4]);
     let eventPhases = {};
     let setIDEvents = {};
-    let exceededEntries = [];
-    let tournamentIDs = await FetchTournaments(pgRR, "rainier rushdown");
-    let eventIDs = await RetrieveEventsBasedOnTournaments(
+    let exceededEntries = {};
+    let tournamentIDs = await FetchTournaments(pgRR, 'rainier rushdown');
+    let eventTournaments = await RetrieveEventsBasedOnTournaments(
         pgRR,
-        tournamentIDs,
-        eventPhases
+        tournamentIDs
     );
-    let entrantPlayers = await RetrievePlayersFromEvents(pgRR, eventIDs);
+
+    const entrants = await RetrieveEntrantsFromEvents(eventTournaments);
+    const players = await RetrievePlayerInfoFromEntrants(pgRR, entrants);
+
+    await RetrievePhasesBasedEvents(eventTournaments, eventPhases);
+
     await RetrieveSetIDsFromEventPhases(
         eventPhases,
         setIDEvents,
         exceededEntries
     );
 
-    await RetrieveSetInfoWithSetIDs(pgRR, entrantPlayers, setIDEvents);
+    let phaseGroupEvents = await RetrievePhaseGroupsFromPhases(exceededEntries);
+
+    if (Object.keys(phaseGroupEvents).length != 0) {
+        await RetrieveSetIDsFromEventPhaseGroups(phaseGroupEvents, setIDEvents);
+    }
+
+    await RetrieveSetInfoWithSetIDs(pgRR, players, setIDEvents);
     await ExecuteQuery(pgRR, sqlQueries[1]);
     await ExecuteQuery(pgRR, sqlQueries[0]);
     res.send(Object.keys(setIDEvents));
 });
 
-app.post("/addUser", (req, res) => {});
-
-app.get("/testSetRetrieval", async (req, res) => {
-    const players = fs
-        .readFileSync(path.resolve(__dirname, "./playerMap.json"))
-        .toString();
-    const playersJSON = JSON.parse(players);
-    let playerMap = new Map();
-    for (let i = 0; i < playersJSON.length; i++) {
-        playerMap.set(playersJSON[i][0], playersJSON[i][1]);
-    }
-
-    let setIDs = await SetRetrieval(playerMap);
-});
-
-app.get("/testSetIDRetrieval", async (req, res) => {
-    let eventPhases = {};
-    eventPhases[1062317] = {
-        PhaseIDs: [1563604, 1707269, 1707270, 1707271, 1707272, 1707273],
-    };
-
-    let setIDEvents = {};
-    let setIDs = await RetrieveSetIDsFromEventPhases(eventPhases, setIDEvents);
-    res.send("Done");
-});
-
-app.get("/clear", async (req, res) => {
+app.get('/clear', async (req, res) => {
     if (await ExecuteQuery(pg, sqlQueries[3])) {
-        res.send("Tables Cleared");
-        console.log("Tables Cleared");
+        res.send('Tables Cleared');
+        console.log('Tables Cleared');
     } else {
-        res.send("Failed to clear tables");
-        console.log("Failed to clear tables");
+        res.send('Failed to clear tables');
+        console.log('Failed to clear tables');
     }
 });
 
-app.get("/clearRR", async (req, res) => {
+app.get('/clearRR', async (req, res) => {
     if (await ExecuteQuery(pgRR, sqlQueries[3])) {
-        res.send("Tables Cleared");
-        console.log("Tables Cleared");
+        res.send('Tables Cleared');
+        console.log('Tables Cleared');
     } else {
-        res.send("Failed to clear tables");
-        console.log("Failed to clear tables");
+        res.send('Failed to clear tables');
+        console.log('Failed to clear tables');
     }
 });
 
-app.get("/dropTables", async (req, res) => {
+app.get('/dropTables', async (req, res) => {
     if (await ExecuteQuery(pg, sqlQueries[2])) {
-        res.send("Tables Dropped");
-        console.log("Tables Dropped");
+        res.send('Tables Dropped');
+        console.log('Tables Dropped');
     } else {
-        res.send("Failed to drop tables");
-        console.log("Failed to drop tables");
+        res.send('Failed to drop tables');
+        console.log('Failed to drop tables');
     }
 });
 
-app.get("/dropTablesRR", async (req, res) => {
+app.get('/dropTablesRR', async (req, res) => {
     if (await ExecuteQuery(pgRR, sqlQueries[2])) {
-        res.send("Tables Dropped");
-        console.log("Tables Dropped");
+        res.send('Tables Dropped');
+        console.log('Tables Dropped');
     } else {
-        res.send("Failed to drop tables");
-        console.log("Failed to drop tables");
+        res.send('Failed to drop tables');
+        console.log('Failed to drop tables');
     }
 });
 
@@ -181,5 +167,5 @@ Test(pg);
 GetSQLFileNames(sqlQueries);
 
 app.listen(3001, () => {
-    console.log("Listening...");
+    console.log('Listening...');
 });
