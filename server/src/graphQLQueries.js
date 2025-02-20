@@ -250,7 +250,6 @@ function RetrieveSetIDsWithPhaseGroups(numPhaseGroups) {
 
 module.exports = {
     GET_TOURNAMENTS,
-    GET_EVENTS,
     EventsQueryCreation,
     PhaseQueryCreation,
     SetIDQueryCreation,
