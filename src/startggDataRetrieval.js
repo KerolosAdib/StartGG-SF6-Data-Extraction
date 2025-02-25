@@ -190,7 +190,7 @@ async function RetrieveEventsBasedOnTournaments(pg, tournamentIds) {
         queryArgs[`SF6`] = 43868;
 
         const query = EventsQueryCreation(args.length);
-
+        lastCall = Date.now();
         let results = await fetch('https://api.start.gg/gql/alpha', {
             method: 'POST',
 
