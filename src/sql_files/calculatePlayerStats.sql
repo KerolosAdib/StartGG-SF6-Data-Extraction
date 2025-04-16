@@ -1,3 +1,4 @@
+DELETE FROM PlayerStats;
 INSERT INTO PlayerStats (PlayerID, TotalSetWins, TotalSetLosses, TotalGameWins, TotalGameLosses)
 SELECT 
     p.PlayerID,
@@ -9,7 +10,7 @@ SELECT
     SUM(CASE WHEN s.PlayerOneID = p.PlayerID THEN s.PlayerTwoWins ELSE s.PlayerOneWins END) 
         FILTER (WHERE s.HasDQ = FALSE) AS TotalGameLosses
 FROM Players p
-JOIN Sets s ON p.PlayerID IN (s.PlayerOneID, s.PlayerTwoID)
+LEFT JOIN Sets s ON p.PlayerID IN (s.PlayerOneID, s.PlayerTwoID)
 WHERE s.HasDQ = FALSE
 GROUP BY p.PlayerID, p.GamerTag
 ON CONFLICT (PlayerID)

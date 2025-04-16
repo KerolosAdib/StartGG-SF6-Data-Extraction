@@ -127,6 +127,45 @@ function SetQueryCreation(numSets) {
     return query;
 }
 
+function PlayersFromSetsQueryCreation(numSets) {
+    let query = `query (`;
+    for (let i = 0; i < numSets; i++) {
+        query += `$S${i + 1}: ID! `;
+    }
+
+    query += `) {`;
+
+    for (let i = 0; i < numSets; i++) {
+        query += `S${i + 1}: set(id: $S${i + 1}) {
+            id
+            event {
+                id
+            }
+            slots(includeByes: true) {
+                entrant {
+                    id
+                    participants {
+                        player {
+                            id
+                            gamerTag
+                            user {
+                                images(type: "profile") {
+                                    url
+                                }
+                                slug
+                            }
+                        }
+                    }
+                }
+            }
+            displayScore(mainEntrantId: -1)
+            winnerId
+        }`;
+    }
+    query += `}`;
+    return query;
+}
+
 function EntrantQueryCreation(numEvents) {
     let query = `query (`;
     for (let i = 0; i < numEvents; i++) {
@@ -164,7 +203,7 @@ function EntrantQueryCreation(numEvents) {
     return query;
 }
 
-function PlayerQueryCreation(numEntrants) {
+function RetrieveParticipantIDsQuery(numEntrants) {
     let query = `query (`;
     for (let i = 0; i < numEntrants; i++) {
         query += `$E${i + 1}: ID! `;
@@ -176,24 +215,40 @@ function PlayerQueryCreation(numEntrants) {
             E${i + 1}: entrant(id: $E${i + 1}) {
                 id
                 participants {
-                    ...ParticipantInfo
+                    id
                 }
             }
         `;
     }
     query += `}`;
+    return query;
+}
 
-    query += `
-        fragment ParticipantInfo on Participant {
-            player {
+function RetrievePlayerIDsQuery(numParticipants) {
+    let query = `query (`;
+    for (let i = 0; i < numParticipants; i++) {
+        query += `$P${i + 1}: ID! `;
+    }
+
+    query += `) {`;
+    for (let i = 0; i < numParticipants; i++) {
+        query += `
+            P${i + 1}: participant(id: $P${i + 1}) {
                 id
-                gamerTag
-                user {
-                    slug
+                player {
+                    id
+                    gamerTag
+                    user {
+                        images(type: "profile") {
+                            url
+                        }
+                        slug
+                    }
                 }
             }
-        }
-    `;
+        `;
+    }
+    query += `}`;
     return query;
 }
 
@@ -248,14 +303,43 @@ function RetrieveSetIDsWithPhaseGroups(numPhaseGroups) {
     return query;
 }
 
+function RetrievePlayerInfoQuery(numPlayers) {
+    let query = `query (`;
+    for (let i = 0; i < numPlayers; i++) {
+        query += `$P${i + 1}: ID! `;
+    }
+
+    query += `) {`;
+
+    for (let i = 0; i < numPlayers; i++) {
+        query += `
+            P${i + 1}: player(id: $P${i + 1}) {
+                id
+                gamerTag
+                user {
+                    images(type: "profile") {
+                        url
+                    }
+                    slug
+                }
+            }
+        `;
+    }
+    query += `}`;
+    return query;
+}
+
 module.exports = {
     GET_TOURNAMENTS,
     EventsQueryCreation,
     PhaseQueryCreation,
     SetIDQueryCreation,
+    PlayersFromSetsQueryCreation,
     SetQueryCreation,
     EntrantQueryCreation,
-    PlayerQueryCreation,
+    RetrieveParticipantIDsQuery,
+    RetrievePlayerIDsQuery,
     GetPhaseGroupsFromPhasesQuery,
     RetrieveSetIDsWithPhaseGroups,
+    RetrievePlayerInfoQuery,
 };

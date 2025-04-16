@@ -1,3 +1,4 @@
+DELETE FROM HeadToHeadStats;
 INSERT INTO HeadToHeadStats (PlayerOneID, PlayerTwoID, PlayerOneSetWins, PlayerTwoSetWins, PlayerOneGameWins, PlayerTwoGameWins)
 SELECT 
     LEAST(s.PlayerOneID, s.PlayerTwoID) AS PlayerOneID,

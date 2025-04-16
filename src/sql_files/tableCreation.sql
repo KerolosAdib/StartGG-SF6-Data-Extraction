@@ -1,7 +1,8 @@
 CREATE TABLE IF NOT EXISTS Players(
     PlayerID INT PRIMARY KEY NOT NULL,
     GamerTag VARCHAR(255) NOT NULL,
-    Slug VARCHAR(255)
+    Slug VARCHAR(255),
+    ProfilePicture VARCHAR(500)
 );
 
 CREATE TABLE IF NOT EXISTS PlayerStats (

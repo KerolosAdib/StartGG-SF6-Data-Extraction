@@ -8,10 +8,13 @@ const {
     PhaseQueryCreation,
     SetIDQueryCreation,
     SetQueryCreation,
+    PlayersFromSetsQueryCreation,
     EntrantQueryCreation,
-    PlayerQueryCreation,
+    RetrieveParticipantIDsQuery,
+    RetrievePlayerIDsQuery,
     GetPhaseGroupsFromPhasesQuery,
     RetrieveSetIDsWithPhaseGroups,
+    RetrievePlayerInfoQuery,
 } = require('./graphQLQueries');
 
 const sqlDir = './src/sql_files/';
@@ -39,6 +42,10 @@ async function CheckConnection(pg) {
     }
 }
 
+function checkArrayOfStrings(string, words) {
+    return words.some((word) => string.includes(word));
+}
+
 async function ViewPlayers(pg) {
     try {
         let table = 'SELECT * FROM Players';
@@ -50,7 +57,7 @@ async function ViewPlayers(pg) {
     }
 }
 
-async function FetchTournaments(pg, name) {
+async function FetchTournaments(pg, name, exludedWords) {
     let hasMore = true;
     let tournamentIds = [];
     let date = new Date(1000);
@@ -94,7 +101,11 @@ async function FetchTournaments(pg, name) {
                 let totalIds = (i - 1) * 10000 + (page - 1) * 500 + j;
                 //let idIndex = Math.floor((totalIds - 1) / 10);
                 if (
-                    (name && tournament.name.toLowerCase().includes(name)) ||
+                    (name && tournament.name.toLowerCase().includes(name)) /*&&
+                        !checkArrayOfStrings(
+                            tournament.name.toLowerCase(),
+                            exludedWords
+                        )*/ ||
                     !name
                 ) {
                     console.log(totalIds);
@@ -154,7 +165,11 @@ async function FetchTournaments(pg, name) {
     return tournamentIds;
 }
 
-async function RetrieveEventsBasedOnTournaments(pg, tournamentIds) {
+async function RetrieveEventsBasedOnTournaments(
+    pg,
+    tournamentIds,
+    excludedWords
+) {
     let outdatedEvents = {};
     let totalEvents = 0;
     let i = 0;
@@ -220,6 +235,13 @@ async function RetrieveEventsBasedOnTournaments(pg, tournamentIds) {
                 if (tournament) {
                     const id = tournament.id;
                     tournament.events.forEach((event) => {
+                        // if (
+                        //     !excludedWords ||
+                        //     !checkArrayOfStrings(
+                        //         event.name.toLowerCase(),
+                        //         excludedWords
+                        //     )
+                        // ) {
                         const eventID = event.id;
                         if (
                             !eventsMap[eventID] ||
@@ -254,9 +276,11 @@ async function RetrieveEventsBasedOnTournaments(pg, tournamentIds) {
 
                             outdatedEvents[event.id] = id;
                         }
-                        args.splice(args.indexOf(id), 1);
+                        // }
                     });
+                    args.splice(args.indexOf(id), 1);
                 }
+
                 console.log(
                     'Highest Query Complexity: ' + highestQueryComplexity
                 );
@@ -433,14 +457,14 @@ async function RetrieveEntrantsFromEvents(eventTournaments) {
     return entrants;
 }
 
-async function RetrievePlayerInfoFromEntrants(pg, entrants) {
-    const entrantPlayers = {};
+async function RetrieveParticipantIDsFromEntrants(entrants) {
+    const participantEntrants = {};
     let highestQueryComplexity = 0;
     let i = 0;
     let args = [];
     let lastCall = new Date(1000);
     while (i < entrants.length || args.length != 0) {
-        while (i < entrants.length && args.length < 225) {
+        while (i < entrants.length && args.length < 450) {
             args.push(entrants[i]);
             i++;
         }
@@ -450,7 +474,7 @@ async function RetrievePlayerInfoFromEntrants(pg, entrants) {
             queryArgs[`E${j + 1}`] = args[j];
         }
 
-        const query = PlayerQueryCreation(args.length);
+        const query = RetrieveParticipantIDsQuery(args.length);
 
         lastCall = Date.now();
 
@@ -481,38 +505,45 @@ async function RetrievePlayerInfoFromEntrants(pg, entrants) {
             let data = results.data;
             for (const key in data) {
                 const entrant = data[key];
-                if (
-                    entrant.participants &&
-                    entrant.participants[0] &&
-                    entrant.participants[0].player
-                ) {
-                    const player = entrant.participants[0].player;
-                    const playerID = player.id;
-                    const playerGamerTag = player.gamerTag;
-                    let playerSlug = '';
-
-                    entrantPlayers[entrant.id] = playerID;
-
-                    if (entrant.participants[0].player.user)
-                        playerSlug = player.user.slug;
-
-                    const insertOrUpdatePlayer = `
-                            INSERT INTO Players(PlayerID, GamerTag, Slug)
-                            VALUES($1, $2, $3)
-                            ON CONFLICT(PlayerID)
-                            DO UPDATE
-                            SET GamerTag = EXCLUDED.GamerTag,
-                                Slug = EXCLUDED.Slug
-                            `;
-
-                    await pg.query(insertOrUpdatePlayer, [
-                        playerID,
-                        playerGamerTag,
-                        playerSlug,
-                    ]);
-                } else {
-                    console.log(entrant.id);
+                if (entrant.participants && entrant.participants[0]) {
+                    if (!participantEntrants[entrant.participants[0].id])
+                        participantEntrants[entrant.participants[0].id] = [];
+                    participantEntrants[entrant.participants[0].id].push(
+                        entrant.id
+                    );
                 }
+                // if (
+                //     entrant.participants &&
+                //     entrant.participants[0] &&
+                //     entrant.participants[0].player
+                // ) {
+                //     const player = entrant.participants[0].player;
+                //     const playerID = player.id;
+                //     const playerGamerTag = player.gamerTag;
+                //     let playerSlug = '';
+
+                //     entrantPlayers[entrant.id] = playerID;
+
+                //     if (entrant.participants[0].player.user)
+                //         playerSlug = player.user.slug;
+
+                //     const insertOrUpdatePlayer = `
+                //             INSERT INTO Players(PlayerID, GamerTag, Slug)
+                //             VALUES($1, $2, $3)
+                //             ON CONFLICT(PlayerID)
+                //             DO UPDATE
+                //             SET GamerTag = EXCLUDED.GamerTag,
+                //                 Slug = EXCLUDED.Slug
+                //     `;
+
+                //     await pg.query(insertOrUpdatePlayer, [
+                //         playerID,
+                //         playerGamerTag,
+                //         playerSlug,
+                //     ]);
+                // } else {
+                //     console.log(entrant.id);
+                // }
                 args.splice(args.indexOf(entrant.id), 1);
             }
         } catch (err) {
@@ -521,7 +552,176 @@ async function RetrievePlayerInfoFromEntrants(pg, entrants) {
         console.log(`Entrants: ${i}/${entrants.length}`);
         await waitUntil(new Date(lastCall + 1000));
     }
+    return participantEntrants;
+}
+
+async function RetrievePlayerIDsFromParticipantIDs(participantEntrants) {
+    const entrantPlayers = {};
+    let highestQueryComplexity = 0;
+    let i = 0;
+    let args = [];
+    let lastCall = new Date(1000);
+    const participants = Object.keys(participantEntrants);
+    while (i < participants.length || args.length != 0) {
+        while (i < participants.length && args.length < 450) {
+            args.push(participants[i]);
+            i++;
+        }
+
+        let queryArgs = {};
+        for (let j = 0; j < args.length; j++) {
+            queryArgs[`P${j + 1}`] = args[j];
+        }
+
+        const query = RetrievePlayerIDsQuery(args.length);
+
+        lastCall = Date.now();
+
+        let results = await fetch('https://api.start.gg/gql/alpha', {
+            method: 'POST',
+
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: 'Bearer ' + process.env.AUTH_TOKEN,
+            },
+
+            body: JSON.stringify({
+                query: query,
+                variables: queryArgs,
+            }),
+        });
+
+        try {
+            results = await results.json();
+
+            console.log(results);
+
+            highestQueryComplexity = Math.max(
+                highestQueryComplexity,
+                results.extensions.queryComplexity
+            );
+
+            let data = results.data;
+            for (const key in data) {
+                const participant = data[key];
+                if (participant.player) {
+                    const player = participant.player;
+                    for (
+                        let j = 0;
+                        j < participantEntrants[participant.id].length;
+                        j++
+                    ) {
+                        entrantPlayers[participantEntrants[participant.id][j]] =
+                            player.id;
+                    }
+                }
+                args.splice(args.indexOf(participants.id), 1);
+            }
+        } catch (err) {
+            console.error(err);
+        }
+        console.log(`Participants: ${i}/${participants.length}`);
+        await waitUntil(new Date(lastCall + 1000));
+    }
     return entrantPlayers;
+}
+
+async function RetrievePlayerInfo(pg, entrantPlayers) {
+    const players = [];
+    const entrantIDs = Object.keys(entrantPlayers);
+    for (let i = 0; i < entrantIDs.length; i++) {
+        if (!players.includes(entrantPlayers[entrantIDs[i]])) {
+            players.push(entrantPlayers[entrantIDs[i]]);
+        }
+    }
+
+    const nullPlayers = [];
+    let i = 0;
+    let args = [];
+    let lastCall = new Date(1000);
+    while (i < players.length || args.length != 0) {
+        while (i < players.length && args.length < 400) {
+            args.push(players[i]);
+            i++;
+        }
+
+        const query = RetrievePlayerInfoQuery(args.length);
+        let queryArgs = {};
+
+        for (let j = 0; j < args.length; j++) {
+            queryArgs['P' + (j + 1)] = args[j];
+        }
+
+        lastCall = Date.now();
+
+        let results = await fetch('https://api.start.gg/gql/alpha', {
+            method: 'POST',
+
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: 'Bearer ' + process.env.AUTH_TOKEN,
+            },
+
+            body: JSON.stringify({
+                query: query,
+                variables: queryArgs,
+            }),
+        });
+
+        try {
+            results = await results.json();
+
+            console.log(results);
+
+            let data = results.data;
+
+            for (const id in data) {
+                const player = data[id];
+                if (player) {
+                    const playerID = player.id;
+                    const gamerTag = player.gamerTag;
+                    let slug;
+                    let image;
+
+                    if (player.user) {
+                        const user = player.user;
+                        if (user.slug) {
+                            slug = user.slug;
+                        }
+                        if (user.images[0]) {
+                            const parsedURL = new URL(user.images[0].url);
+                            image = `${parsedURL.origin}${parsedURL.pathname}`;
+                        }
+                    }
+
+                    const insertOrUpdatePlayer = `
+                        INSERT INTO Players(PlayerID, GamerTag, Slug, ProfilePicture)
+                        VALUES($1, $2, $3, $4)
+                        ON CONFLICT(PlayerID)
+                        DO UPDATE
+                        SET GamerTag = EXCLUDED.GamerTag,
+                            Slug = EXCLUDED.Slug,
+                            ProfilePicture = EXCLUDED.ProfilePicture
+                    `;
+
+                    await pg.query(insertOrUpdatePlayer, [
+                        playerID,
+                        gamerTag,
+                        slug,
+                        image,
+                    ]);
+                } else {
+                    nullPlayers.push(args[0]);
+                }
+                args.shift();
+            }
+            console.log('Players: ' + i + '/' + players.length);
+        } catch (err) {
+            console.error(err);
+        }
+        await waitUntil(new Date(lastCall + 1000));
+    }
+    return nullPlayers;
 }
 
 async function RetrieveSetIDsFromEventPhases(
@@ -537,7 +737,7 @@ async function RetrieveSetIDsFromEventPhases(
     let phaseIDs = Object.keys(eventPhases);
 
     while (i < phaseIDs.length || Object.keys(args).length != 0) {
-        while (i < phaseIDs.length && Object.keys(args).length < 400) {
+        while (i < phaseIDs.length && Object.keys(args).length < 200) {
             args[phaseIDs[i]] = 1;
             i++;
         }
@@ -848,7 +1048,7 @@ async function RetrieveSetInfoWithSetIDs(pg, entrantPlayers, setIDEvents) {
                             if (
                                 !isNaN(parseInt(scores[0])) &&
                                 !isNaN(parseInt(scores[1]))
-                            )
+                            ) {
                                 if (data[set].winnerId == entrants[0]) {
                                     playerOneScore = Math.max(
                                         parseInt(scores[0]),
@@ -868,6 +1068,7 @@ async function RetrieveSetInfoWithSetIDs(pg, entrantPlayers, setIDEvents) {
                                         parseInt(scores[1])
                                     );
                                 }
+                            }
                         } else if (
                             (score && score == 'DQ') ||
                             (score && score.includes('-1'))
@@ -879,16 +1080,16 @@ async function RetrieveSetInfoWithSetIDs(pg, entrantPlayers, setIDEvents) {
                             winnerId = entrantPlayers[data[set].winnerId];
 
                         const insertOrUpdateSet = `
-                        INSERT INTO Sets(SetID, EventID, PlayerOneID, PlayerTwoID, PlayerOneWins, PlayerTwoWins, WinnerID, HasDQ)
-                        VALUES($1, $2, $3, $4, $5, $6, $7, $8)
-                        ON CONFLICT(SetID)
-                        DO UPDATE
-                        SET PlayerOneID = EXCLUDED.PlayerOneID,
-                            PlayerTwoID = EXCLUDED.PlayerTwoID,
-                            PlayerOneWins = EXCLUDED.PlayerOneWins,
-                            PlayerTwoWins = EXCLUDED.PlayerTwoWins,
-                            WinnerID = EXCLUDED.WinnerID,
-                            HasDQ = EXCLUDED.HasDQ
+                            INSERT INTO Sets(SetID, EventID, PlayerOneID, PlayerTwoID, PlayerOneWins, PlayerTwoWins, WinnerID, HasDQ)
+                            VALUES($1, $2, $3, $4, $5, $6, $7, $8)
+                            ON CONFLICT(SetID)
+                            DO UPDATE
+                            SET PlayerOneID = EXCLUDED.PlayerOneID,
+                                PlayerTwoID = EXCLUDED.PlayerTwoID,
+                                PlayerOneWins = EXCLUDED.PlayerOneWins,
+                                PlayerTwoWins = EXCLUDED.PlayerTwoWins,
+                                WinnerID = EXCLUDED.WinnerID,
+                                HasDQ = EXCLUDED.HasDQ
                         `;
 
                         await pg.query(insertOrUpdateSet, [
@@ -916,15 +1117,323 @@ async function RetrieveSetInfoWithSetIDs(pg, entrantPlayers, setIDEvents) {
     }
 }
 
-async function Test(pg) {
-    let date = new Date(1);
-    console.log(date);
-    date.setTime(1734307200 * 1000);
-    console.log(date);
+async function UpdatePlayerInfo(pg) {
+    const query = 'SELECT PlayerID FROM Players';
+    const res = await pg.query(query);
+    const rows = res.rows;
+    let lastCall = Date.now();
+    const nullPlayers = [];
 
+    let i = 0;
+    let playerIDArgs = [];
+    while (i < rows.length || playerIDArgs.length != 0) {
+        while (i < rows.length && playerIDArgs.length < 400) {
+            playerIDArgs.push(rows[i].playerid);
+            i++;
+        }
+
+        const query = RetrievePlayerInfoQuery(playerIDArgs.length);
+        let queryArgs = {};
+
+        for (let j = 0; j < playerIDArgs.length; j++) {
+            queryArgs['P' + (j + 1)] = playerIDArgs[j];
+        }
+
+        lastCall = Date.now();
+
+        let results = await fetch('https://api.start.gg/gql/alpha', {
+            method: 'POST',
+
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: 'Bearer ' + process.env.AUTH_TOKEN,
+            },
+
+            body: JSON.stringify({
+                query: query,
+                variables: queryArgs,
+            }),
+        });
+
+        try {
+            results = await results.json();
+            console.log(results);
+            let data = results.data;
+
+            for (const id in data) {
+                const player = data[id];
+                if (player) {
+                    const playerID = player.id;
+                    const gamerTag = player.gamerTag;
+                    if (player.user) {
+                        let slug;
+                        let image;
+                        if (player.user) {
+                            const user = player.user;
+                            if (user.slug) {
+                                slug = user.slug;
+                            }
+                            if (user.images[0]) {
+                                const parsedURL = new URL(user.images[0].url);
+                                image = `${parsedURL.origin}${parsedURL.pathname}`;
+                            }
+                        }
+
+                        const updateQuery = `
+                            UPDATE Players
+                            SET GamerTag = $1,
+                                Slug = $2,
+                                ProfilePicture = $3
+                            WHERE PlayerID = $4;
+                        `;
+
+                        await pg.query(updateQuery, [
+                            gamerTag,
+                            slug,
+                            image,
+                            playerID,
+                        ]);
+                    }
+                } else {
+                    nullPlayers.push(queryArgs[id]);
+                }
+                playerIDArgs.shift();
+            }
+            console.log(i + '/' + rows.length);
+        } catch (err) {
+            console.error(err);
+        }
+        await waitUntil(new Date(lastCall + 1000));
+    }
+    return nullPlayers;
+}
+
+async function GetSetIDsWithPlayerIDs(pg, players) {
+    const outdatedSetIDs = [];
+    const query =
+        'SELECT SetID FROM Sets WHERE PlayerOneID=$1 OR PlayerTwoID=$1';
     try {
-        let query = 'SELECT TournamentID, LatestUpdate FROM Tournaments;';
-        const res = await pg.query(query);
+        for (let i = 0; i < players.length; i++) {
+            const res = await pg.query(query, [players[i]]);
+            const setIDs = res.rows;
+            for (let j = 0; j < setIDs.length; j++) {
+                outdatedSetIDs.push(setIDs[j].setid);
+            }
+        }
+    } catch (err) {
+        console.error(err);
+    }
+    return outdatedSetIDs;
+}
+
+async function UpdateSetsWithCorrectPlayers(pg, outdatedSetIDs) {
+    const args = [];
+    let i = 0;
+    let highestQueryComplexity = 0;
+    while (i < outdatedSetIDs.length || args.length != 0) {
+        while (i < outdatedSetIDs.length && args.length < 75) {
+            args.push(outdatedSetIDs[i]);
+            i++;
+        }
+
+        const query = PlayersFromSetsQueryCreation(args.length);
+        let queryArgs = {};
+
+        for (let j = 0; j < args.length; j++) {
+            queryArgs['S' + (j + 1)] = args[j];
+        }
+
+        lastCall = Date.now();
+
+        let results = await fetch('https://api.start.gg/gql/alpha', {
+            method: 'POST',
+
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: 'Bearer ' + process.env.AUTH_TOKEN,
+            },
+
+            body: JSON.stringify({
+                query: query,
+                variables: queryArgs,
+            }),
+        });
+
+        try {
+            results = await results.json();
+
+            console.log(results);
+            for (let j = 0; j < args.length; j++) {
+                console.log(`S${j + 1}: ${args[j]}`);
+            }
+            highestQueryComplexity = Math.max(
+                highestQueryComplexity,
+                results.extensions.queryComplexity
+            );
+
+            let data = results.data;
+
+            for (const id in data) {
+                const set = data[id];
+                const setID = set.id;
+                const eventID = set.event.id;
+                const entrantPlayers = [];
+                if (set.slots) {
+                    await set.slots.forEach(async (slot) => {
+                        if (
+                            slot.entrant &&
+                            slot.entrant.participants[0] &&
+                            slot.entrant.participants[0].player
+                        ) {
+                            const entrantID = slot.entrant.id;
+                            const player = slot.entrant.participants[0].player;
+                            const playerID = player.id;
+                            const gamerTag = player.gamerTag;
+                            let slug;
+                            let image;
+
+                            entrantPlayers.push({
+                                entrantID: entrantID,
+                                playerID: playerID,
+                            });
+
+                            if (player.user) {
+                                const user = player.user;
+                                if (user.slug) {
+                                    slug = user.slug;
+                                }
+                                if (user.images[0]) {
+                                    const parsedURL = new URL(
+                                        user.images[0].url
+                                    );
+                                    image = `${parsedURL.origin}${parsedURL.pathname}`;
+                                }
+                            }
+
+                            const insertOrUpdatePlayer = `
+                                INSERT INTO Players(PlayerID, GamerTag, Slug, ProfilePicture)
+                                VALUES($1, $2, $3, $4)
+                                ON CONFLICT(PlayerID)
+                                DO UPDATE
+                                SET GamerTag = EXCLUDED.GamerTag,
+                                    Slug = EXCLUDED.Slug,
+                                    ProfilePicture = EXCLUDED.ProfilePicture
+                            `;
+
+                            await pg.query(insertOrUpdatePlayer, [
+                                playerID,
+                                gamerTag,
+                                slug,
+                                image,
+                            ]);
+                        }
+                    });
+                }
+
+                if (entrantPlayers.length == 2) {
+                    let playerOneID = entrantPlayers[0].playerID;
+                    let playerTwoID = entrantPlayers[1].playerID;
+                    let playerOneScore = 0;
+                    let playerTwoScore = 0;
+                    let hasDQ = false;
+                    let winnerId;
+                    const score = set.displayScore;
+
+                    console.log(score);
+                    if (score && score != 'DQ' && !score.includes('-1')) {
+                        const scores = score.split(' - ');
+                        if (
+                            !isNaN(parseInt(scores[0])) &&
+                            !isNaN(parseInt(scores[1]))
+                        ) {
+                            if (set.winnerId == entrantPlayers[0].entrantID) {
+                                playerOneScore = Math.max(
+                                    parseInt(scores[0]),
+                                    parseInt(scores[1])
+                                );
+                                playerTwoScore = Math.min(
+                                    parseInt(scores[0]),
+                                    parseInt(scores[1])
+                                );
+                            } else if (
+                                set.winnerId == entrantPlayers[1].entrantID
+                            ) {
+                                playerOneScore = Math.min(
+                                    parseInt(scores[0]),
+                                    parseInt(scores[1])
+                                );
+                                playerTwoScore = Math.max(
+                                    parseInt(scores[0]),
+                                    parseInt(scores[1])
+                                );
+                            }
+                        }
+                    } else if (
+                        (score && score == 'DQ') ||
+                        (score && score.includes('-1'))
+                    ) {
+                        hasDQ = true;
+                    }
+
+                    if (set.winnerId == entrantPlayers[0].entrantID)
+                        winnerId = entrantPlayers[0].playerID;
+                    else if (set.winnerId == entrantPlayers[1].entrantID)
+                        winnerId = entrantPlayers[1].playerID;
+
+                    const insertOrUpdateSet = `
+                        INSERT INTO Sets(SetID, EventID, PlayerOneID, PlayerTwoID, PlayerOneWins, PlayerTwoWins, WinnerID, HasDQ)
+                        VALUES($1, $2, $3, $4, $5, $6, $7, $8)
+                        ON CONFLICT(SetID)
+                        DO UPDATE
+                        SET PlayerOneID = EXCLUDED.PlayerOneID,
+                            PlayerTwoID = EXCLUDED.PlayerTwoID,
+                            PlayerOneWins = EXCLUDED.PlayerOneWins,
+                            PlayerTwoWins = EXCLUDED.PlayerTwoWins,
+                            WinnerID = EXCLUDED.WinnerID,
+                            HasDQ = EXCLUDED.HasDQ
+                    `;
+
+                    await pg.query(insertOrUpdateSet, [
+                        setID,
+                        eventID,
+                        playerOneID,
+                        playerTwoID,
+                        playerOneScore,
+                        playerTwoScore,
+                        winnerId,
+                        hasDQ,
+                    ]);
+                }
+                args.shift();
+            }
+
+            console.log('Highest Query Complexity: ' + highestQueryComplexity);
+            console.log(i + '/' + outdatedSetIDs.length);
+        } catch (err) {
+            console.error(err);
+        }
+        await waitUntil(new Date(lastCall + 1000));
+    }
+}
+
+async function RemoveOutdatedPlayers(pg, outdatedPlayers) {
+    const deletePlayerQuery = `
+        DELETE FROM HeadToHeadStats WHERE PlayerOneID = $1 OR PlayerTwoID = $1;
+        DELETE FROM PlayerStats WHERE PlayerID = $1;
+        DELETE FROM Players WHERE PlayerID = $1;
+    `;
+
+    for (let i = 0; i < outdatedPlayers.length; i++) {
+        const playerID = outdatedPlayers[i];
+        await pg.query(deletePlayerQuery, [playerID]);
+    }
+}
+
+async function Test(pg) {
+    try {
+        let query =
+            'SELECT SetID FROM Sets WHERE PlayerOneID=$1 OR PlayerTwoID=$1';
+        const res = await pg.query(query, [4436169]);
         console.log(res.rows);
     } catch (err) {
         console.error(err);
@@ -959,10 +1468,16 @@ module.exports = {
     RetrievePhasesBasedEvents,
     RetrieveSetIDsFromEventPhases,
     RetrieveEntrantsFromEvents,
-    RetrievePlayerInfoFromEntrants,
+    RetrieveParticipantIDsFromEntrants,
+    RetrievePlayerIDsFromParticipantIDs,
+    RetrievePlayerInfo,
     RetrievePhaseGroupsFromPhases,
     RetrieveSetIDsFromEventPhaseGroups,
     RetrieveSetInfoWithSetIDs,
+    UpdatePlayerInfo,
+    GetSetIDsWithPlayerIDs,
+    UpdateSetsWithCorrectPlayers,
+    RemoveOutdatedPlayers,
     Test,
     ExecuteQuery,
     GetSQLFileNames,
