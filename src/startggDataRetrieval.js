@@ -563,7 +563,7 @@ async function RetrievePlayerIDsFromParticipantIDs(participantEntrants) {
     let lastCall = new Date(1000);
     const participants = Object.keys(participantEntrants);
     while (i < participants.length || args.length != 0) {
-        while (i < participants.length && args.length < 450) {
+        while (i < participants.length && args.length < 333) {
             args.push(participants[i]);
             i++;
         }
@@ -792,8 +792,10 @@ async function RetrieveSetIDsFromEventPhases(
 
                 if (phase.sets.pageInfo.totalPages <= 100) {
                     phase.sets.nodes.forEach((set) => {
-                        setIDEvents[set.id] = eventID;
-                        numSets++;
+                        if (!set.id.toString().includes('preview')) {
+                            setIDEvents[set.id] = eventID;
+                            numSets++;
+                        }
                     });
 
                     if (args[phaseID] < phase.sets.pageInfo.totalPages)
@@ -1417,15 +1419,21 @@ async function UpdateSetsWithCorrectPlayers(pg, outdatedSetIDs) {
 }
 
 async function RemoveOutdatedPlayers(pg, outdatedPlayers) {
-    const deletePlayerQuery = `
+    const deletePlayerFromHeadToHeadStats = `
         DELETE FROM HeadToHeadStats WHERE PlayerOneID = $1 OR PlayerTwoID = $1;
+    `;
+    const deletePlayerFromPlayerStats = `
         DELETE FROM PlayerStats WHERE PlayerID = $1;
+    `;
+    const deletePlayerFromPlayers = `
         DELETE FROM Players WHERE PlayerID = $1;
     `;
 
     for (let i = 0; i < outdatedPlayers.length; i++) {
         const playerID = outdatedPlayers[i];
-        await pg.query(deletePlayerQuery, [playerID]);
+        await pg.query(deletePlayerFromHeadToHeadStats, [playerID]);
+        await pg.query(deletePlayerFromPlayerStats, [playerID]);
+        await pg.query(deletePlayerFromPlayers, [playerID]);
     }
 }
 
