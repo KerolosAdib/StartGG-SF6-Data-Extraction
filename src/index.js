@@ -51,6 +51,11 @@ const pgRR = new PG.Pool({
 
 app.use(cors());
 
+app.get('/start', async (req, res) => {
+    await Start();
+    setInterval(Start, 86400000);
+});
+
 app.get('/GetInfo', async (req, res) => {
     await ExecuteQuery(pg, sqlQueries[4]);
     await RetrieveStartGGGlobalData();
@@ -228,6 +233,8 @@ async function RetrieveStartGGGlobalData() {
 }
 
 async function Start() {
+    // Create Tables if they don't exist
+    await ExecuteQuery(pg, sqlQueries[4]);
     // Update players
     const nullPlayers = await UpdatePlayerInfo(pg);
     const outdatedSets = await GetSetIDsWithPlayerIDs(pg, nullPlayers);
@@ -242,14 +249,7 @@ async function Start() {
     await ExecuteQuery(pg, sqlQueries[0]);
 }
 
-Start();
-setInterval(Start, 86400000);
-
 CheckConnection(pg);
-
-ViewPlayers(pg);
-
-Test(pg);
 
 GetSQLFileNames(sqlQueries);
 
