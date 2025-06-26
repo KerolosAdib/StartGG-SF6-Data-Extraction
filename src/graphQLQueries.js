@@ -46,6 +46,7 @@ function EventsQueryCreation(numTournaments) {
                     id
                     name
                     slug
+                    startAt
                     updatedAt
                 }
             }

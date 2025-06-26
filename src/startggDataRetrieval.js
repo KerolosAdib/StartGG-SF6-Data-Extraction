@@ -130,17 +130,20 @@ async function FetchTournaments(pg, name, exludedWords) {
                         // });
 
                         const insert = `
-                            INSERT INTO Tournaments(TournamentID, CreatedAt, LatestUpdate, TournamentName, Slug)
-                            VALUES($1, TO_TIMESTAMP($2), TO_TIMESTAMP($3), $4, $5)
+                            INSERT INTO Tournaments(TournamentID, StartedAt, CreatedAt, LatestUpdate, TournamentName, Slug)
+                            VALUES($1, TO_TIMESTAMP($2), TO_TIMESTAMP($3), TO_TIMESTAMP($4), $5, $6)
                             ON CONFLICT(TournamentID)
                             DO UPDATE
-                            SET LatestUpdate = EXCLUDED.LatestUpdate,
+                            SET StartedAt = EXCLUDED.StartedAt,
+                                CreatedAt = EXCLUDED.CreatedAt,
+                                LatestUpdate = EXCLUDED.LatestUpdate,
                                 TournamentName = EXCLUDED.TournamentName,
                                 Slug = EXCLUDED.Slug
                             WHERE Tournaments.LatestUpdate != EXCLUDED.LatestUpdate;
                         `;
                         pg.query(insert, [
                             tournament.id,
+                            tournament.startAt,
                             tournament.createdAt,
                             tournament.updatedAt,
                             tournament.name,
@@ -256,11 +259,12 @@ async function RetrieveEventsBasedOnTournaments(
                             console.log(`Total Events: ${totalEvents}`);
                             totalEvents++;
                             const insertOrUpdateEvent = `
-                                INSERT INTO Events(TournamentID, EventID, LatestUpdate, EventName, Slug)
-                                VALUES($1, $2, TO_TIMESTAMP($3), $4, $5)
+                                INSERT INTO Events(TournamentID, EventID, StartedAt, LatestUpdate, EventName, Slug)
+                                VALUES($1, $2, TO_TIMESTAMP($3), TO_TIMESTAMP($4), $5, $6)
                                 ON CONFLICT(EventID)
                                 DO UPDATE
-                                SET LatestUpdate = EXCLUDED.LatestUpdate,
+                                SET StartedAt = EXCLUDED.StartedAt,
+                                    LatestUpdate = EXCLUDED.LatestUpdate,
                                     EventName = EXCLUDED.EventName,
                                     Slug = EXCLUDED.Slug
                                 WHERE Events.LatestUpdate != EXCLUDED.LatestUpdate
@@ -269,6 +273,7 @@ async function RetrieveEventsBasedOnTournaments(
                             pg.query(insertOrUpdateEvent, [
                                 id,
                                 event.id,
+                                event.startAt,
                                 event.updatedAt,
                                 event.name,
                                 event.slug,

@@ -26,6 +26,7 @@ CREATE TABLE IF NOT EXISTS HeadToHeadStats(
 
 CREATE TABLE IF NOT EXISTS Tournaments(
     TournamentID INT PRIMARY KEY NOT NULL,
+    StartedAt TIMESTAMP,
     CreatedAt TIMESTAMP,
     LatestUpdate TIMESTAMP,
     TournamentName VARCHAR(255),
@@ -35,6 +36,7 @@ CREATE TABLE IF NOT EXISTS Tournaments(
 CREATE TABLE IF NOT EXISTS Events(
     EventID INT PRIMARY KEY NOT NULL,
     TournamentID INT REFERENCES Tournaments(TournamentID),
+    StartedAt TIMESTAMP,
     LatestUpdate TIMESTAMP,
     EventName VARCHAR(255),
     Slug VARCHAR(255) NOT NULL
