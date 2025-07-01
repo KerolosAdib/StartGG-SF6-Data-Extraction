@@ -215,6 +215,11 @@ function RetrieveParticipantIDsQuery(numEntrants) {
         query += `
             E${i + 1}: entrant(id: $E${i + 1}) {
                 id
+                isDisqualified
+                initialSeedNum
+                standing {
+                    placement
+                }
                 participants {
                     id
                 }

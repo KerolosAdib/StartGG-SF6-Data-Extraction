@@ -21,6 +21,7 @@ const {
     UpdatePlayerInfo,
     GetSetIDsWithPlayerIDs,
     UpdateSetsWithCorrectPlayers,
+    InsertOrUpdatePlayerEventStats,
     RemoveOutdatedPlayers,
     Test,
     ExecuteQuery,
@@ -194,11 +195,17 @@ app.get('/updatePlayerInfoRR', async (req, res) => {
     await UpdatePlayerInfo(pgRR);
 });
 
+app.get('/addPlayerEventStats', async (req, res) => {
+    await UpdateAllPlayerEventStats();
+    res.end('Done');
+});
+
 async function RetrieveStartGGGlobalData() {
     let tournamentIds = await FetchTournaments(pg);
     let eventPhases = {};
     let exceededEntries = {};
     let setIDEvents = {};
+    let playerEventStats = {};
     console.time('events');
     let eventTournaments = await RetrieveEventsBasedOnTournaments(
         pg,
@@ -211,17 +218,25 @@ async function RetrieveStartGGGlobalData() {
         setIDEvents,
         exceededEntries
     );
-    const entrants = await RetrieveEntrantsFromEvents(eventTournaments);
+
+    const entrants = await RetrieveEntrantsFromEvents(
+        eventTournaments,
+        playerEventStats
+    );
     const participantEntrants = await RetrieveParticipantIDsFromEntrants(
-        entrants
+        entrants,
+        playerEventStats
     );
     const entrantPlayers = await RetrievePlayerIDsFromParticipantIDs(
-        participantEntrants
+        participantEntrants,
+        playerEventStats
     );
     const nullPlayers = await RetrievePlayerInfo(pg, entrantPlayers);
     if (nullPlayers.length != 0) {
         console.log(nullPlayers);
     }
+
+    await InsertOrUpdatePlayerEventStats(pg, playerEventStats);
 
     let phaseGroupEvents = await RetrievePhaseGroupsFromPhases(exceededEntries);
 
@@ -247,6 +262,42 @@ async function Start() {
     // Organize data
     await ExecuteQuery(pg, sqlQueries[1]);
     await ExecuteQuery(pg, sqlQueries[0]);
+}
+
+async function UpdateAllPlayerEventStats() {
+    // Create Tables if they don't exist
+    await ExecuteQuery(pg, sqlQueries[4]);
+
+    const playerEventStats = {};
+    const getEventsQuery =
+        'SELECT e.EventID, t.TournamentID FROM Events e JOIN Tournaments t ON e.TournamentID = t.TournamentID;';
+    const res = await pg.query(getEventsQuery);
+    const eventTournaments = {};
+    if (res.rows) {
+        let rows = res.rows;
+        for (const row of rows) {
+            eventTournaments[row.eventid] = row.tournamentid;
+        }
+
+        const entrants = await RetrieveEntrantsFromEvents(
+            eventTournaments,
+            playerEventStats
+        );
+        const participantEntrants = await RetrieveParticipantIDsFromEntrants(
+            entrants,
+            playerEventStats
+        );
+        const entrantPlayers = await RetrievePlayerIDsFromParticipantIDs(
+            participantEntrants,
+            playerEventStats
+        );
+
+        const nullPlayers = await RetrievePlayerInfo(pg, entrantPlayers);
+        if (nullPlayers.length != 0) {
+            console.log(nullPlayers);
+        }
+        await InsertOrUpdatePlayerEventStats(pg, playerEventStats);
+    }
 }
 
 CheckConnection(pg);

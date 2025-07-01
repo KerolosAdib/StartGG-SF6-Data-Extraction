@@ -364,7 +364,7 @@ async function RetrievePhasesBasedEvents(eventTournaments, eventPhases) {
     }
 }
 
-async function RetrieveEntrantsFromEvents(eventTournaments) {
+async function RetrieveEntrantsFromEvents(eventTournaments, playerEventStats) {
     const entrants = [];
     let numEntrants = 0;
     let highestQueryComplexity = 0;
@@ -431,6 +431,8 @@ async function RetrieveEntrantsFromEvents(eventTournaments) {
                         entrantsPerEvent[data[event].id]++;
 
                         entrants.push(entrant.id);
+                        playerEventStats[entrant.id] = {};
+                        playerEventStats[entrant.id].EventID = data[event].id;
 
                         console.log(`EntrantID: ${entrant.id}`);
                     });
@@ -462,14 +464,14 @@ async function RetrieveEntrantsFromEvents(eventTournaments) {
     return entrants;
 }
 
-async function RetrieveParticipantIDsFromEntrants(entrants) {
+async function RetrieveParticipantIDsFromEntrants(entrants, playerEventStats) {
     const participantEntrants = {};
     let highestQueryComplexity = 0;
     let i = 0;
     let args = [];
     let lastCall = new Date(1000);
     while (i < entrants.length || args.length != 0) {
-        while (i < entrants.length && args.length < 450) {
+        while (i < entrants.length && args.length < 195) {
             args.push(entrants[i]);
             i++;
         }
@@ -549,6 +551,15 @@ async function RetrieveParticipantIDsFromEntrants(entrants) {
                 // } else {
                 //     console.log(entrant.id);
                 // }
+                if (entrant.initialSeedNum)
+                    playerEventStats[entrant.id].Seeding =
+                        entrant.initialSeedNum;
+                if (entrant.standing && entrant.standing.placement)
+                    playerEventStats[entrant.id].Placement =
+                        entrant.standing.placement;
+                if (entrant.isdisqualified)
+                    playerEventStats[entrant.id].IsDisqualified = true;
+                else playerEventStats[entrant.id].IsDisqualified = false;
                 args.splice(args.indexOf(entrant.id), 1);
             }
         } catch (err) {
@@ -560,7 +571,10 @@ async function RetrieveParticipantIDsFromEntrants(entrants) {
     return participantEntrants;
 }
 
-async function RetrievePlayerIDsFromParticipantIDs(participantEntrants) {
+async function RetrievePlayerIDsFromParticipantIDs(
+    participantEntrants,
+    playerEventStats
+) {
     const entrantPlayers = {};
     let highestQueryComplexity = 0;
     let i = 0;
@@ -618,6 +632,9 @@ async function RetrievePlayerIDsFromParticipantIDs(participantEntrants) {
                     ) {
                         entrantPlayers[participantEntrants[participant.id][j]] =
                             player.id;
+                        playerEventStats[
+                            participantEntrants[participant.id][j]
+                        ].PlayerID = player.id;
                     }
                 }
                 args.splice(args.indexOf(participants.id), 1);
@@ -1423,6 +1440,31 @@ async function UpdateSetsWithCorrectPlayers(pg, outdatedSetIDs) {
     }
 }
 
+async function InsertOrUpdatePlayerEventStats(pg, playerEventStats) {
+    const query = `
+        INSERT INTO PlayerEventStats(EntrantID, PlayerID, EventID, SeedPlacement, FinalPlacement, IsDisqualified)
+        VALUES($1, $2, $3, $4, $5, $6)
+        ON CONFLICT(EntrantID)
+        DO UPDATE
+        SET PlayerID = EXCLUDED.PlayerID,
+            EventID = EXCLUDED.EventID,
+            SeedPlacement = EXCLUDED.SeedPlacement,
+            FinalPlacement = EXCLUDED.FinalPlacement,
+            IsDisqualified = EXCLUDED.IsDisqualified
+    `;
+    for (const entrantID in playerEventStats) {
+        const stats = playerEventStats[entrantID];
+        await pg.query(query, [
+            entrantID,
+            stats.PlayerID,
+            stats.EventID,
+            stats.Seeding,
+            stats.Placement,
+            stats.IsDisqualified,
+        ]);
+    }
+}
+
 async function RemoveOutdatedPlayers(pg, outdatedPlayers) {
     const deletePlayerFromHeadToHeadStats = `
         DELETE FROM HeadToHeadStats WHERE PlayerOneID = $1 OR PlayerTwoID = $1;
@@ -1490,6 +1532,7 @@ module.exports = {
     UpdatePlayerInfo,
     GetSetIDsWithPlayerIDs,
     UpdateSetsWithCorrectPlayers,
+    InsertOrUpdatePlayerEventStats,
     RemoveOutdatedPlayers,
     Test,
     ExecuteQuery,

@@ -42,6 +42,15 @@ CREATE TABLE IF NOT EXISTS Events(
     Slug VARCHAR(255) NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS PlayerEventStats(
+    EntrantID INT PRIMARY KEY NOT NULL,
+    PlayerID INT REFERENCES Players(PlayerID),
+    EventID INT REFERENCES Events(EventID),
+    SeedPlacement INT CHECK (SeedPlacement > 0),
+    FinalPlacement INT CHECK (FinalPlacement > 0),
+    IsDisqualified BOOLEAN
+);
+
 CREATE TABLE IF NOT EXISTS Sets(
     SetID INT PRIMARY KEY NOT NULL,
     EventID INT REFERENCES Events(EventID),
