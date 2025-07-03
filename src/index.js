@@ -21,7 +21,9 @@ const {
     UpdatePlayerInfo,
     GetSetIDsWithPlayerIDs,
     UpdateSetsWithCorrectPlayers,
+    GetEntrantIDsToUpdate,
     InsertOrUpdatePlayerEventStats,
+    UpdateNullPlayersInPlayerEventStats,
     RemoveOutdatedPlayers,
     Test,
     ExecuteQuery,
@@ -200,6 +202,19 @@ app.get('/addPlayerEventStats', async (req, res) => {
     res.end('Done');
 });
 
+app.get('/test', async (req, res) => {
+    const entrantQuery = `
+        SELECT EntrantID FROM PlayerEventStats WHERE PlayerID = ANY($1);
+    `;
+
+    const playerIDs = [763741, 13341, 240230];
+
+    const results = await pg.query(entrantQuery, [playerIDs]);
+    const entrantIDs = results.rows.map((entrant) => entrant.entrantid);
+    console.log(entrantIDs);
+    res.end('Done');
+});
+
 async function RetrieveStartGGGlobalData() {
     let tournamentIds = await FetchTournaments(pg);
     let eventPhases = {};
@@ -253,6 +268,15 @@ async function Start() {
     // Update players
     const nullPlayers = await UpdatePlayerInfo(pg);
     const outdatedSets = await GetSetIDsWithPlayerIDs(pg, nullPlayers);
+    const entrantIDs = await GetEntrantIDsToUpdate(pg, nullPlayers);
+
+    const participantEntrants = await RetrieveParticipantIDsFromEntrants(
+        entrantIDs
+    );
+    const entrantPlayers = await RetrievePlayerIDsFromParticipantIDs(
+        participantEntrants
+    );
+    await UpdateNullPlayersInPlayerEventStats(pg, entrantPlayers);
     await UpdateSetsWithCorrectPlayers(pg, outdatedSets);
     await RemoveOutdatedPlayers(pg, nullPlayers);
 

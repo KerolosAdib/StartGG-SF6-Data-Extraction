@@ -431,8 +431,11 @@ async function RetrieveEntrantsFromEvents(eventTournaments, playerEventStats) {
                         entrantsPerEvent[data[event].id]++;
 
                         entrants.push(entrant.id);
-                        playerEventStats[entrant.id] = {};
-                        playerEventStats[entrant.id].EventID = data[event].id;
+                        if (playerEventStats) {
+                            playerEventStats[entrant.id] = {};
+                            playerEventStats[entrant.id].EventID =
+                                data[event].id;
+                        }
 
                         console.log(`EntrantID: ${entrant.id}`);
                     });
@@ -551,15 +554,17 @@ async function RetrieveParticipantIDsFromEntrants(entrants, playerEventStats) {
                 // } else {
                 //     console.log(entrant.id);
                 // }
-                if (entrant.initialSeedNum)
-                    playerEventStats[entrant.id].Seeding =
-                        entrant.initialSeedNum;
-                if (entrant.standing && entrant.standing.placement)
-                    playerEventStats[entrant.id].Placement =
-                        entrant.standing.placement;
-                if (entrant.isdisqualified)
-                    playerEventStats[entrant.id].IsDisqualified = true;
-                else playerEventStats[entrant.id].IsDisqualified = false;
+                if (playerEventStats) {
+                    if (entrant.initialSeedNum)
+                        playerEventStats[entrant.id].Seeding =
+                            entrant.initialSeedNum;
+                    if (entrant.standing && entrant.standing.placement)
+                        playerEventStats[entrant.id].Placement =
+                            entrant.standing.placement;
+                    if (entrant.isdisqualified)
+                        playerEventStats[entrant.id].IsDisqualified = true;
+                    else playerEventStats[entrant.id].IsDisqualified = false;
+                }
                 args.splice(args.indexOf(entrant.id), 1);
             }
         } catch (err) {
@@ -632,9 +637,11 @@ async function RetrievePlayerIDsFromParticipantIDs(
                     ) {
                         entrantPlayers[participantEntrants[participant.id][j]] =
                             player.id;
-                        playerEventStats[
-                            participantEntrants[participant.id][j]
-                        ].PlayerID = player.id;
+                        if (playerEventStats) {
+                            playerEventStats[
+                                participantEntrants[participant.id][j]
+                            ].PlayerID = player.id;
+                        }
                     }
                 }
                 args.splice(args.indexOf(participants.id), 1);
@@ -1440,6 +1447,20 @@ async function UpdateSetsWithCorrectPlayers(pg, outdatedSetIDs) {
     }
 }
 
+async function GetEntrantIDsToUpdate(pg, nullPlayers) {
+    const entrantQuery = `
+        SELECT EntrantID FROM PlayerEventStats WHERE PlayerID = ANY($1);
+    `;
+    let entrantIDs = [];
+    try {
+        const res = await pg.query(entrantQuery, [nullPlayers]);
+        entrantIDs = res.rows.map((entrant) => entrant.entrantid);
+    } catch (err) {
+        console.error(err);
+    }
+    return entrantIDs;
+}
+
 async function InsertOrUpdatePlayerEventStats(pg, playerEventStats) {
     const query = `
         INSERT INTO PlayerEventStats(EntrantID, PlayerID, EventID, SeedPlacement, FinalPlacement, IsDisqualified)
@@ -1452,16 +1473,36 @@ async function InsertOrUpdatePlayerEventStats(pg, playerEventStats) {
             FinalPlacement = EXCLUDED.FinalPlacement,
             IsDisqualified = EXCLUDED.IsDisqualified
     `;
-    for (const entrantID in playerEventStats) {
-        const stats = playerEventStats[entrantID];
-        await pg.query(query, [
-            entrantID,
-            stats.PlayerID,
-            stats.EventID,
-            stats.Seeding,
-            stats.Placement,
-            stats.IsDisqualified,
-        ]);
+    try {
+        for (const entrantID in playerEventStats) {
+            const stats = playerEventStats[entrantID];
+            await pg.query(query, [
+                entrantID,
+                stats.PlayerID,
+                stats.EventID,
+                stats.Seeding,
+                stats.Placement,
+                stats.IsDisqualified,
+            ]);
+        }
+    } catch (err) {
+        console.error(err);
+    }
+}
+
+async function UpdateNullPlayersInPlayerEventStats(pg, entrantPlayers) {
+    const query = `
+        UPDATE PlayerEventStats
+        SET PlayerID = $1
+        WHERE EntrantID = $2;
+    `;
+    try {
+        for (const entrantID in entrantPlayers) {
+            const playerID = entrantPlayers[entrantID];
+            await pg.query(query, [playerID, entrantID]);
+        }
+    } catch (err) {
+        console.error(err);
     }
 }
 
@@ -1532,7 +1573,9 @@ module.exports = {
     UpdatePlayerInfo,
     GetSetIDsWithPlayerIDs,
     UpdateSetsWithCorrectPlayers,
+    GetEntrantIDsToUpdate,
     InsertOrUpdatePlayerEventStats,
+    UpdateNullPlayersInPlayerEventStats,
     RemoveOutdatedPlayers,
     Test,
     ExecuteQuery,
