@@ -12,6 +12,7 @@ const {
     RetrievePhasesBasedEvents,
     RetrieveEntrantsFromEvents,
     RetrieveParticipantIDsFromEntrants,
+    RetrieveSeedingAndStandingInfo,
     RetrievePlayerIDsFromParticipantIDs,
     RetrievePlayerInfo,
     RetrieveSetIDsFromEventPhases,
@@ -239,9 +240,9 @@ async function RetrieveStartGGGlobalData() {
         playerEventStats
     );
     const participantEntrants = await RetrieveParticipantIDsFromEntrants(
-        entrants,
-        playerEventStats
+        entrants
     );
+    await RetrieveSeedingAndStandingInfo(entrants, playerEventStats);
     const entrantPlayers = await RetrievePlayerIDsFromParticipantIDs(
         participantEntrants,
         playerEventStats
@@ -266,20 +267,7 @@ async function Start() {
     // Create Tables if they don't exist
     await ExecuteQuery(pg, sqlQueries[4]);
     // Update players
-    const nullPlayers = await UpdatePlayerInfo(pg);
-    const outdatedSets = await GetSetIDsWithPlayerIDs(pg, nullPlayers);
-    const entrantIDs = await GetEntrantIDsToUpdate(pg, nullPlayers);
-
-    const participantEntrants = await RetrieveParticipantIDsFromEntrants(
-        entrantIDs
-    );
-    const entrantPlayers = await RetrievePlayerIDsFromParticipantIDs(
-        participantEntrants
-    );
-    await UpdateNullPlayersInPlayerEventStats(pg, entrantPlayers);
-    await UpdateSetsWithCorrectPlayers(pg, outdatedSets);
-    await RemoveOutdatedPlayers(pg, nullPlayers);
-
+    await FixNullPlayersInTables();
     // Retrieve new data
     await RetrieveStartGGGlobalData();
 
@@ -291,6 +279,9 @@ async function Start() {
 async function UpdateAllPlayerEventStats() {
     // Create Tables if they don't exist
     await ExecuteQuery(pg, sqlQueries[4]);
+
+    // See if there are any null players and fix them
+    await FixNullPlayersInTables();
 
     const playerEventStats = {};
     const getEventsQuery =
@@ -308,20 +299,33 @@ async function UpdateAllPlayerEventStats() {
             playerEventStats
         );
         const participantEntrants = await RetrieveParticipantIDsFromEntrants(
-            entrants,
-            playerEventStats
+            entrants
         );
-        const entrantPlayers = await RetrievePlayerIDsFromParticipantIDs(
+        await RetrieveSeedingAndStandingInfo(entrants, playerEventStats);
+        await RetrievePlayerIDsFromParticipantIDs(
             participantEntrants,
             playerEventStats
         );
-
-        const nullPlayers = await RetrievePlayerInfo(pg, entrantPlayers);
-        if (nullPlayers.length != 0) {
-            console.log(nullPlayers);
-        }
         await InsertOrUpdatePlayerEventStats(pg, playerEventStats);
     }
+}
+
+async function FixNullPlayersInTables() {
+    const nullPlayers = await UpdatePlayerInfo(pg);
+    if (nullPlayers.length != 0)
+        console.log(`Number of Null Players: ${nullPlayers.length}`);
+    const outdatedSets = await GetSetIDsWithPlayerIDs(pg, nullPlayers);
+    const entrantIDs = await GetEntrantIDsToUpdate(pg, nullPlayers);
+
+    const participantEntrants = await RetrieveParticipantIDsFromEntrants(
+        entrantIDs
+    );
+    const entrantPlayers = await RetrievePlayerIDsFromParticipantIDs(
+        participantEntrants
+    );
+    await UpdateNullPlayersInPlayerEventStats(pg, entrantPlayers);
+    await UpdateSetsWithCorrectPlayers(pg, outdatedSets);
+    await RemoveOutdatedPlayers(pg, nullPlayers);
 }
 
 CheckConnection(pg);

@@ -215,13 +215,31 @@ function RetrieveParticipantIDsQuery(numEntrants) {
         query += `
             E${i + 1}: entrant(id: $E${i + 1}) {
                 id
+                participants {
+                    id
+                }
+            }
+        `;
+    }
+    query += `}`;
+    return query;
+}
+
+function RetrieveSeedingAndStandingInfoQuery(numEntrants) {
+    let query = `query (`;
+    for (let i = 0; i < numEntrants; i++) {
+        query += `$E${i + 1}: ID! `;
+    }
+
+    query += `) {`;
+    for (let i = 0; i < numEntrants; i++) {
+        query += `
+            E${i + 1}: entrant(id: $E${i + 1}) {
+                id
                 isDisqualified
                 initialSeedNum
                 standing {
                     placement
-                }
-                participants {
-                    id
                 }
             }
         `;
@@ -243,13 +261,6 @@ function RetrievePlayerIDsQuery(numParticipants) {
                 id
                 player {
                     id
-                    gamerTag
-                    user {
-                        images(type: "profile") {
-                            url
-                        }
-                        slug
-                    }
                 }
             }
         `;
@@ -344,6 +355,7 @@ module.exports = {
     SetQueryCreation,
     EntrantQueryCreation,
     RetrieveParticipantIDsQuery,
+    RetrieveSeedingAndStandingInfoQuery,
     RetrievePlayerIDsQuery,
     GetPhaseGroupsFromPhasesQuery,
     RetrieveSetIDsWithPhaseGroups,

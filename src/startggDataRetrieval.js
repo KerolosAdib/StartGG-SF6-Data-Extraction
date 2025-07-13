@@ -11,6 +11,7 @@ const {
     PlayersFromSetsQueryCreation,
     EntrantQueryCreation,
     RetrieveParticipantIDsQuery,
+    RetrieveSeedingAndStandingInfoQuery,
     RetrievePlayerIDsQuery,
     GetPhaseGroupsFromPhasesQuery,
     RetrieveSetIDsWithPhaseGroups,
@@ -467,14 +468,14 @@ async function RetrieveEntrantsFromEvents(eventTournaments, playerEventStats) {
     return entrants;
 }
 
-async function RetrieveParticipantIDsFromEntrants(entrants, playerEventStats) {
+async function RetrieveParticipantIDsFromEntrants(entrants) {
     const participantEntrants = {};
     let highestQueryComplexity = 0;
     let i = 0;
     let args = [];
     let lastCall = new Date(1000);
     while (i < entrants.length || args.length != 0) {
-        while (i < entrants.length && args.length < 195) {
+        while (i < entrants.length && args.length < 499) {
             args.push(entrants[i]);
             i++;
         }
@@ -522,38 +523,65 @@ async function RetrieveParticipantIDsFromEntrants(entrants, playerEventStats) {
                         entrant.id
                     );
                 }
-                // if (
-                //     entrant.participants &&
-                //     entrant.participants[0] &&
-                //     entrant.participants[0].player
-                // ) {
-                //     const player = entrant.participants[0].player;
-                //     const playerID = player.id;
-                //     const playerGamerTag = player.gamerTag;
-                //     let playerSlug = '';
 
-                //     entrantPlayers[entrant.id] = playerID;
+                args.splice(args.indexOf(entrant.id), 1);
+            }
+        } catch (err) {
+            console.error(err);
+        }
+        console.log(`Entrants: ${i}/${entrants.length}`);
+        await waitUntil(new Date(lastCall + 1000));
+    }
+    return participantEntrants;
+}
 
-                //     if (entrant.participants[0].player.user)
-                //         playerSlug = player.user.slug;
+async function RetrieveSeedingAndStandingInfo(entrants, playerEventStats) {
+    let highestQueryComplexity = 0;
+    let i = 0;
+    let args = [];
+    let lastCall = new Date(1000);
+    while (i < entrants.length || args.length != 0) {
+        while (i < entrants.length && args.length < 249) {
+            args.push(entrants[i]);
+            i++;
+        }
 
-                //     const insertOrUpdatePlayer = `
-                //             INSERT INTO Players(PlayerID, GamerTag, Slug)
-                //             VALUES($1, $2, $3)
-                //             ON CONFLICT(PlayerID)
-                //             DO UPDATE
-                //             SET GamerTag = EXCLUDED.GamerTag,
-                //                 Slug = EXCLUDED.Slug
-                //     `;
+        let queryArgs = {};
+        for (let j = 0; j < args.length; j++) {
+            queryArgs[`E${j + 1}`] = args[j];
+        }
 
-                //     await pg.query(insertOrUpdatePlayer, [
-                //         playerID,
-                //         playerGamerTag,
-                //         playerSlug,
-                //     ]);
-                // } else {
-                //     console.log(entrant.id);
-                // }
+        const query = RetrieveSeedingAndStandingInfoQuery(args.length);
+
+        lastCall = Date.now();
+
+        let results = await fetch('https://api.start.gg/gql/alpha', {
+            method: 'POST',
+
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: 'Bearer ' + process.env.AUTH_TOKEN,
+            },
+
+            body: JSON.stringify({
+                query: query,
+                variables: queryArgs,
+            }),
+        });
+
+        try {
+            results = await results.json();
+
+            console.log(results);
+
+            highestQueryComplexity = Math.max(
+                highestQueryComplexity,
+                results.extensions.queryComplexity
+            );
+
+            let data = results.data;
+            for (const key in data) {
+                const entrant = data[key];
                 if (playerEventStats) {
                     if (entrant.initialSeedNum)
                         playerEventStats[entrant.id].Seeding =
@@ -573,7 +601,6 @@ async function RetrieveParticipantIDsFromEntrants(entrants, playerEventStats) {
         console.log(`Entrants: ${i}/${entrants.length}`);
         await waitUntil(new Date(lastCall + 1000));
     }
-    return participantEntrants;
 }
 
 async function RetrievePlayerIDsFromParticipantIDs(
@@ -587,7 +614,7 @@ async function RetrievePlayerIDsFromParticipantIDs(
     let lastCall = new Date(1000);
     const participants = Object.keys(participantEntrants);
     while (i < participants.length || args.length != 0) {
-        while (i < participants.length && args.length < 333) {
+        while (i < participants.length && args.length < 499) {
             args.push(participants[i]);
             i++;
         }
@@ -1473,17 +1500,23 @@ async function InsertOrUpdatePlayerEventStats(pg, playerEventStats) {
             FinalPlacement = EXCLUDED.FinalPlacement,
             IsDisqualified = EXCLUDED.IsDisqualified
     `;
+    const checkPlayerQuery = `
+        SELECT * FROM Players WHERE PlayerID = $1;
+    `;
     try {
         for (const entrantID in playerEventStats) {
             const stats = playerEventStats[entrantID];
-            await pg.query(query, [
-                entrantID,
-                stats.PlayerID,
-                stats.EventID,
-                stats.Seeding,
-                stats.Placement,
-                stats.IsDisqualified,
-            ]);
+            const res = await pg.query(checkPlayerQuery, [stats.PlayerID]);
+            if (res.rows.length != 0) {
+                await pg.query(query, [
+                    entrantID,
+                    stats.PlayerID,
+                    stats.EventID,
+                    stats.Seeding,
+                    stats.Placement,
+                    stats.IsDisqualified,
+                ]);
+            }
         }
     } catch (err) {
         console.error(err);
@@ -1565,6 +1598,7 @@ module.exports = {
     RetrieveSetIDsFromEventPhases,
     RetrieveEntrantsFromEvents,
     RetrieveParticipantIDsFromEntrants,
+    RetrieveSeedingAndStandingInfo,
     RetrievePlayerIDsFromParticipantIDs,
     RetrievePlayerInfo,
     RetrievePhaseGroupsFromPhases,
