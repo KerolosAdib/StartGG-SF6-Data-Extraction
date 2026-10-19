@@ -1,2 +1,23 @@
-/.env
-/node_modules
+# Environment
+.env
+
+# Dependencies
+node_modules/
+
+# Logs
+logs/
+*.log
+
+# OS
+.DS_Store
+
+# Old source backup
+.old_src/
+
+# Terraform (state can hold sensitive values)
+infra/.terraform/
+*.tfstate
+*.tfstate.*
+
+# Legacy SQL scripts (kept locally, not used)
+src/sql_files/

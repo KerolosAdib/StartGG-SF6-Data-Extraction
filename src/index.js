@@ -1,337 +1,107 @@
-const express = require('express');
-const cors = require('cors');
-const PG = require('pg');
-const fs = require('fs');
-const path = require('path');
-
-const {
-    CheckConnection,
-    ViewPlayers,
-    FetchTournaments,
-    RetrieveEventsBasedOnTournaments,
-    RetrievePhasesBasedEvents,
-    RetrieveEntrantsFromEvents,
-    RetrieveParticipantIDsFromEntrants,
-    RetrieveSeedingAndStandingInfo,
-    RetrievePlayerIDsFromParticipantIDs,
-    RetrievePlayerInfo,
-    RetrieveSetIDsFromEventPhases,
-    RetrievePhaseGroupsFromPhases,
-    RetrieveSetIDsFromEventPhaseGroups,
-    RetrieveSetInfoWithSetIDs,
-    UpdatePlayerInfo,
-    GetSetIDsWithPlayerIDs,
-    UpdateSetsWithCorrectPlayers,
-    GetEntrantIDsToUpdate,
-    InsertOrUpdatePlayerEventStats,
-    UpdateNullPlayersInPlayerEventStats,
-    RemoveOutdatedPlayers,
-    Test,
-    ExecuteQuery,
-    GetSQLFileNames,
-} = require('./startggDataRetrieval');
+/**
+ * Main entry point for the scraper.
+ *
+ * Dispatches to the correct scraper based on the SCRAPER_MODE env var:
+ *   - startgg-full:        Full sync of all start.gg data for configured games.
+ *   - startgg-incremental: Quick sync of recently updated tournaments/events.
+ *
+ * Use npm scripts or env vars to select the mode and (optionally) a
+ * single GAME_ID.
+ */
 
 require('dotenv').config();
 
-const sqlQueries = [];
+const logger = require('./lib/logger');
+const { GAMES } = require('./config');
+const { runPipeline, releaseActiveLock } = require('./scrapers/startgg/pipeline');
+const { pool } = require('./db/postgres');
 
-const app = express();
-
-const pg = new PG.Pool({
-    user: process.env.PGUSER,
-    password: process.env.PGPASSWORD,
-    host: process.env.PGHOST,
-    database: process.env.PGDATABASE,
-    port: process.env.PGPORT,
-});
-
-const pgRR = new PG.Pool({
-    user: process.env.PGUSER,
-    password: process.env.PGPASSWORD,
-    host: process.env.PGHOST,
-    database: process.env.PGDATABASERR,
-    port: process.env.PGPORT,
-});
-
-app.use(cors());
-
-app.get('/start', async (req, res) => {
-    await Start();
-    setInterval(Start, 86400000);
-});
-
-app.get('/GetInfo', async (req, res) => {
-    await ExecuteQuery(pg, sqlQueries[4]);
-    await RetrieveStartGGGlobalData();
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end('Done');
-});
-
-app.get('/getRainierRushdownInfo', async (req, res) => {
-    await ExecuteQuery(pgRR, sqlQueries[4]);
-    let eventPhases = {};
-    let setIDEvents = {};
-    let exceededEntries = {};
-    let tournamentIDs = await FetchTournaments(pgRR, 'rainier rushdown', [
-        'rookie',
-        'redemption',
-    ]);
-    let eventTournaments = await RetrieveEventsBasedOnTournaments(
-        pgRR,
-        tournamentIDs
-    );
-    console.timeEnd('events');
-    const entrants = await RetrieveEntrantsFromEvents(eventTournaments);
-    const participantEntrants = await RetrieveParticipantIDsFromEntrants(
-        entrants
-    );
-    const entrantPlayers = await RetrievePlayerIDsFromParticipantIDs(
-        participantEntrants
-    );
-    const nullPlayers = await RetrievePlayerInfo(pgRR, entrantPlayers);
-    if (nullPlayers.length != 0) {
-        console.log(nullPlayers);
+/**
+ * Close the database pool, then exit. An open connection would keep
+ * Aurora from pausing, so always go through this instead of process.exit.
+ */
+async function shutdown(code) {
+    try {
+        await pool.end();
+    } catch {
+        // Ignore: we're exiting anyway
     }
-    await RetrievePhasesBasedEvents(eventTournaments, eventPhases);
-    await RetrieveSetIDsFromEventPhases(
-        eventPhases,
-        setIDEvents,
-        exceededEntries
-    );
-
-    let phaseGroupEvents = await RetrievePhaseGroupsFromPhases(exceededEntries);
-
-    if (Object.keys(phaseGroupEvents).length != 0) {
-        await RetrieveSetIDsFromEventPhaseGroups(phaseGroupEvents, setIDEvents);
-    }
-
-    await RetrieveSetInfoWithSetIDs(pgRR, entrantPlayers, setIDEvents);
-    await ExecuteQuery(pgRR, sqlQueries[1]);
-    await ExecuteQuery(pgRR, sqlQueries[0]);
-    res.send(Object.keys(setIDEvents));
-});
-
-app.get('/organizeData', async (req, res) => {
-    await ExecuteQuery(pg, sqlQueries[1]);
-    await ExecuteQuery(pg, sqlQueries[0]);
-    res.send('Done');
-});
-
-app.get('/clear', async (req, res) => {
-    if (await ExecuteQuery(pg, sqlQueries[3])) {
-        res.send('Tables Cleared');
-        console.log('Tables Cleared');
-    } else {
-        res.send('Failed to clear tables');
-        console.log('Failed to clear tables');
-    }
-});
-
-app.get('/clearRR', async (req, res) => {
-    if (await ExecuteQuery(pgRR, sqlQueries[3])) {
-        res.send('Tables Cleared');
-        console.log('Tables Cleared');
-    } else {
-        res.send('Failed to clear tables');
-        console.log('Failed to clear tables');
-    }
-});
-
-app.get('/dropTables', async (req, res) => {
-    if (await ExecuteQuery(pg, sqlQueries[2])) {
-        res.send('Tables Dropped');
-        console.log('Tables Dropped');
-    } else {
-        res.send('Failed to drop tables');
-        console.log('Failed to drop tables');
-    }
-});
-
-app.get('/dropTablesRR', async (req, res) => {
-    if (await ExecuteQuery(pgRR, sqlQueries[2])) {
-        res.send('Tables Dropped');
-        console.log('Tables Dropped');
-    } else {
-        res.send('Failed to drop tables');
-        console.log('Failed to drop tables');
-    }
-});
-
-app.get('/updateSpecificEvent', async (req, res) => {
-    const eventID = req.query.eventID;
-    const tournamentID = req.query.tournamentID;
-    let eventPhases = {};
-    let exceededEntries = {};
-    let setIDEvents = {};
-    const eventTournaments = {};
-    eventTournaments[eventID] = tournamentID;
-    const entrants = await RetrieveEntrantsFromEvents(eventTournaments);
-    const players = await RetrievePlayerInfoFromEntrants(pg, entrants);
-    await RetrievePhasesBasedEvents(eventTournaments, eventPhases);
-    await RetrieveSetIDsFromEventPhases(
-        eventPhases,
-        setIDEvents,
-        exceededEntries
-    );
-
-    let phaseGroupEvents = await RetrievePhaseGroupsFromPhases(exceededEntries);
-
-    if (Object.keys(phaseGroupEvents).length != 0) {
-        await RetrieveSetIDsFromEventPhaseGroups(phaseGroupEvents, setIDEvents);
-    }
-
-    await RetrieveSetInfoWithSetIDs(pg, players, setIDEvents);
-
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end('Done');
-});
-
-app.get('/updatePlayerInfo', async (req, res) => {
-    const nullPlayers = await UpdatePlayerInfo(pg);
-    const outdatedSets = await GetSetIDsWithPlayerIDs(pg, nullPlayers);
-    await UpdateSetsWithCorrectPlayers(pg, outdatedSets);
-    await RemoveOutdatedPlayers(pg, nullPlayers);
-    res.end('Done');
-});
-
-app.get('/updatePlayerInfoRR', async (req, res) => {
-    await UpdatePlayerInfo(pgRR);
-});
-
-app.get('/addPlayerEventStats', async (req, res) => {
-    await UpdateAllPlayerEventStats();
-    res.end('Done');
-});
-
-app.get('/test', async (req, res) => {
-    const entrantQuery = `
-        SELECT EntrantID FROM PlayerEventStats WHERE PlayerID = ANY($1);
-    `;
-
-    const playerIDs = [763741, 13341, 240230];
-
-    const results = await pg.query(entrantQuery, [playerIDs]);
-    const entrantIDs = results.rows.map((entrant) => entrant.entrantid);
-    console.log(entrantIDs);
-    res.end('Done');
-});
-
-async function RetrieveStartGGGlobalData() {
-    let tournamentIds = await FetchTournaments(pg);
-    let eventPhases = {};
-    let exceededEntries = {};
-    let setIDEvents = {};
-    let playerEventStats = {};
-    console.time('events');
-    let eventTournaments = await RetrieveEventsBasedOnTournaments(
-        pg,
-        tournamentIds
-    );
-    console.timeEnd('events');
-    await RetrievePhasesBasedEvents(eventTournaments, eventPhases);
-    await RetrieveSetIDsFromEventPhases(
-        eventPhases,
-        setIDEvents,
-        exceededEntries
-    );
-
-    const entrants = await RetrieveEntrantsFromEvents(
-        eventTournaments,
-        playerEventStats
-    );
-    const participantEntrants = await RetrieveParticipantIDsFromEntrants(
-        entrants
-    );
-    await RetrieveSeedingAndStandingInfo(entrants, playerEventStats);
-    const entrantPlayers = await RetrievePlayerIDsFromParticipantIDs(
-        participantEntrants,
-        playerEventStats
-    );
-    const nullPlayers = await RetrievePlayerInfo(pg, entrantPlayers);
-    if (nullPlayers.length != 0) {
-        console.log(nullPlayers);
-    }
-
-    await InsertOrUpdatePlayerEventStats(pg, playerEventStats);
-
-    let phaseGroupEvents = await RetrievePhaseGroupsFromPhases(exceededEntries);
-
-    if (Object.keys(phaseGroupEvents).length != 0) {
-        await RetrieveSetIDsFromEventPhaseGroups(phaseGroupEvents, setIDEvents);
-    }
-
-    await RetrieveSetInfoWithSetIDs(pg, entrantPlayers, setIDEvents);
+    process.exit(code);
 }
 
-async function Start() {
-    // Create Tables if they don't exist
-    await ExecuteQuery(pg, sqlQueries[4]);
-    // Update players
-    await FixNullPlayersInTables();
-    // Retrieve new data
-    await RetrieveStartGGGlobalData();
+async function main() {
+    const mode = process.env.SCRAPER_MODE || 'startgg-full';
+    const gameIdOverride = process.env.GAME_ID ? parseInt(process.env.GAME_ID, 10) : null;
 
-    // Organize data
-    await ExecuteQuery(pg, sqlQueries[1]);
-    await ExecuteQuery(pg, sqlQueries[0]);
-}
+    logger.info('Scraper starting', { mode, gameIdOverride, pid: process.pid });
 
-async function UpdateAllPlayerEventStats() {
-    // Create Tables if they don't exist
-    await ExecuteQuery(pg, sqlQueries[4]);
+    try {
+        switch (mode) {
+            case 'startgg-full': {
+                const games = gameIdOverride
+                    ? GAMES.filter((g) => g.id === gameIdOverride)
+                    : GAMES;
 
-    // See if there are any null players and fix them
-    await FixNullPlayersInTables();
+                if (games.length === 0) {
+                    logger.error(`No game found for GAME_ID=${gameIdOverride}`);
+                    await shutdown(1);
+                }
 
-    const playerEventStats = {};
-    const getEventsQuery =
-        'SELECT e.EventID, t.TournamentID FROM Events e JOIN Tournaments t ON e.TournamentID = t.TournamentID;';
-    const res = await pg.query(getEventsQuery);
-    const eventTournaments = {};
-    if (res.rows) {
-        let rows = res.rows;
-        for (const row of rows) {
-            eventTournaments[row.eventid] = row.tournamentid;
+                for (const game of games) {
+                    await runPipeline(game.id, game.name, 'full');
+                }
+                break;
+            }
+
+            case 'startgg-incremental': {
+                const games = gameIdOverride
+                    ? GAMES.filter((g) => g.id === gameIdOverride)
+                    : GAMES;
+
+                if (games.length === 0) {
+                    logger.error(`No game found for GAME_ID=${gameIdOverride}`);
+                    await shutdown(1);
+                }
+
+                for (const game of games) {
+                    await runPipeline(game.id, game.name, 'incremental');
+                }
+                break;
+            }
+
+            default:
+                logger.error(`Unknown SCRAPER_MODE: ${mode}`);
+                await shutdown(1);
         }
 
-        const entrants = await RetrieveEntrantsFromEvents(
-            eventTournaments,
-            playerEventStats
-        );
-        const participantEntrants = await RetrieveParticipantIDsFromEntrants(
-            entrants
-        );
-        await RetrieveSeedingAndStandingInfo(entrants, playerEventStats);
-        await RetrievePlayerIDsFromParticipantIDs(
-            participantEntrants,
-            playerEventStats
-        );
-        await InsertOrUpdatePlayerEventStats(pg, playerEventStats);
+        logger.info('Scraper finished successfully', { mode });
+        await shutdown(0);
+
+    } catch (err) {
+        logger.error('Scraper failed', { error: err.message, stack: err.stack });
+        await shutdown(1);
     }
 }
 
-async function FixNullPlayersInTables() {
-    const nullPlayers = await UpdatePlayerInfo(pg);
-    if (nullPlayers.length != 0)
-        console.log(`Number of Null Players: ${nullPlayers.length}`);
-    const outdatedSets = await GetSetIDsWithPlayerIDs(pg, nullPlayers);
-    const entrantIDs = await GetEntrantIDsToUpdate(pg, nullPlayers);
-
-    const participantEntrants = await RetrieveParticipantIDsFromEntrants(
-        entrantIDs
-    );
-    const entrantPlayers = await RetrievePlayerIDsFromParticipantIDs(
-        participantEntrants
-    );
-    await UpdateNullPlayersInPlayerEventStats(pg, entrantPlayers);
-    await UpdateSetsWithCorrectPlayers(pg, outdatedSets);
-    await RemoveOutdatedPlayers(pg, nullPlayers);
+/**
+ * On SIGTERM (ECS stopping the task) or SIGINT (Ctrl-C), release the
+ * running game's lock and exit. Progress is already saved after every
+ * batch, so the next run resumes from the last saved position.
+ */
+let stopping = false;
+async function handleStopSignal(signal, exitCode) {
+    if (stopping) return;
+    stopping = true;
+    logger.warn(`Received ${signal}, stopping`);
+    try {
+        await releaseActiveLock(`Stopped by ${signal}`);
+    } catch (err) {
+        logger.error('Failed to release lock on stop', { error: err.message });
+    }
+    await shutdown(exitCode);
 }
 
-CheckConnection(pg);
+process.on('SIGTERM', () => handleStopSignal('SIGTERM', 143));
+process.on('SIGINT', () => handleStopSignal('SIGINT', 130));
 
-GetSQLFileNames(sqlQueries);
-
-app.listen(3001, () => {
-    console.log('Listening...');
-});
+main();

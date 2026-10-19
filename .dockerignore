@@ -1,0 +1,7 @@
+node_modules
+logs
+.env
+*.zip
+.git
+infra
+.old_src
