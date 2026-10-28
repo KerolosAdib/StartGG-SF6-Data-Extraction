@@ -89,6 +89,15 @@ const STARTGG = {
 const STALE_LOCK_HOURS = 12;
 
 /**
+ * Before a run starts, keep retrying the database for up to this long,
+ * so a paused Aurora cluster has time to resume.
+ */
+const DATABASE_WAKE = {
+    maxWaitSeconds: 300,
+    retryIntervalSeconds: 10,
+};
+
+/**
  * For incremental syncs: how far back (in seconds) to look for
  * recently started/updated tournaments.
  */
@@ -98,5 +107,6 @@ module.exports = {
     GAMES,
     STARTGG,
     STALE_LOCK_HOURS,
+    DATABASE_WAKE,
     INCREMENTAL_LOOKBACK_SECONDS,
 };

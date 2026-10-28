@@ -14,7 +14,7 @@ require('dotenv').config();
 const logger = require('./lib/logger');
 const { GAMES } = require('./config');
 const { runPipeline, releaseActiveLock } = require('./scrapers/startgg/pipeline');
-const { pool } = require('./db/postgres');
+const { pool, waitForDatabase } = require('./db/postgres');
 
 /**
  * Close the database pool, then exit. An open connection would keep
@@ -36,6 +36,8 @@ async function main() {
     logger.info('Scraper starting', { mode, gameIdOverride, pid: process.pid });
 
     try {
+        await waitForDatabase();
+
         switch (mode) {
             case 'startgg-full': {
                 const games = gameIdOverride

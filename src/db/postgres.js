@@ -4,6 +4,9 @@
  */
 const fs = require('fs');
 const { Pool, types, defaults } = require('pg');
+const { DATABASE_WAKE } = require('../config');
+const logger = require('../lib/logger');
+const { sleep } = require('../lib/rateLimiter');
 
 // Return BIGINT columns (game IDs, cursors, counts) as numbers.
 // Safe for values up to 2^53, far above anything start.gg uses.
@@ -29,6 +32,30 @@ const pool = new Pool({
         ? { ca: fs.readFileSync(caPath, 'utf8'), rejectUnauthorized: true }
         : false, // local Postgres without SSL
 });
+
+/**
+ * Wait until the database answers a query, retrying while a paused
+ * Aurora cluster resumes. Throws if it is still unreachable after
+ * DATABASE_WAKE.maxWaitSeconds.
+ */
+async function waitForDatabase() {
+    const { maxWaitSeconds, retryIntervalSeconds } = DATABASE_WAKE;
+    const deadline = Date.now() + maxWaitSeconds * 1000;
+
+    for (let attempt = 1; ; attempt++) {
+        try {
+            await pool.query('SELECT 1');
+            if (attempt > 1) logger.info('Database is reachable', { attempt });
+            return;
+        } catch (err) {
+            if (Date.now() + retryIntervalSeconds * 1000 > deadline) {
+                throw new Error(`Database not reachable after ${maxWaitSeconds}s: ${err.message}`);
+            }
+            logger.warn('Database not reachable yet, retrying', { attempt, error: err.message });
+            await sleep(retryIntervalSeconds * 1000);
+        }
+    }
+}
 
 /**
  * Run one query and return its rows. Pass a client from withTransaction()
@@ -115,4 +142,4 @@ async function insert(table, rows, client = pool) {
     }
 }
 
-module.exports = { pool, query, withTransaction, upsert, insert };
+module.exports = { pool, waitForDatabase, query, withTransaction, upsert, insert };

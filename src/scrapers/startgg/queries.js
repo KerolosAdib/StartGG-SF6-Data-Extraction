@@ -239,6 +239,7 @@ function buildSetDetailsQuery(count) {
             updatedAt
             completedAt
             winnerId
+            bestOf
         }
     `
 
